@@ -1,6 +1,6 @@
 {
   "installCommand": "corepack enable pnpm && pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm run build",
+  "buildCommand": "node scripts/bump-sw-version.js && next build",
   "framework": "nextjs",
   "outputDirectory": ".next",
   "functions": {
