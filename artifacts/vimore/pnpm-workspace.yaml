@@ -1,0 +1,7 @@
+# Vercel builds this app from this directory instead of the monorepo root.
+# Keep the native/runtime package build scripts explicitly approved there too.
+onlyBuiltDependencies:
+  - '@google/genai'
+  - protobufjs
+  - esbuild
+  - sharp
