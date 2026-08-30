@@ -1,0 +1,185 @@
+{
+  "projectId": "vimore123",
+  "projectName": "ViMore",
+  "collections": [
+    {
+      "$id": "group_messages",
+      "name": "Group Messages",
+      "enabled": true,
+      "documentSecurity": false,
+      "attributes": [
+        {
+          "key": "cluster_id",
+          "type": "string",
+          "required": true,
+          "array": false,
+          "size": 36,
+          "default": null
+        },
+        {
+          "key": "sender_id",
+          "type": "string",
+          "required": true,
+          "array": false,
+          "size": 36,
+          "default": null
+        },
+        {
+          "key": "sender_name",
+          "type": "string",
+          "required": true,
+          "array": false,
+          "size": 128,
+          "default": null
+        },
+        {
+          "key": "sender_avatar",
+          "type": "string",
+          "required": false,
+          "array": false,
+          "size": 512,
+          "default": null
+        },
+        {
+          "key": "type",
+          "type": "string",
+          "required": true,
+          "array": false,
+          "size": 20,
+          "default": "text"
+        },
+        {
+          "key": "text",
+          "type": "string",
+          "required": false,
+          "array": false,
+          "size": 4000,
+          "default": null
+        },
+        {
+          "key": "media_id",
+          "type": "string",
+          "required": false,
+          "array": false,
+          "size": 36,
+          "default": null
+        },
+        {
+          "key": "media_url",
+          "type": "string",
+          "required": false,
+          "array": false,
+          "size": 2000,
+          "default": null
+        },
+        {
+          "key": "voice_duration",
+          "type": "string",
+          "required": false,
+          "array": false,
+          "size": 20,
+          "default": null
+        },
+        {
+          "key": "is_read",
+          "type": "boolean",
+          "required": false,
+          "array": false,
+          "default": false
+        },
+        {
+          "key": "post_id",
+          "type": "string",
+          "required": false,
+          "array": false,
+          "size": 36,
+          "default": null
+        },
+        {
+          "key": "shared_post_data",
+          "type": "string",
+          "required": false,
+          "array": false,
+          "size": 8000,
+          "default": null
+        },
+        {
+          "key": "reply_to_id",
+          "type": "string",
+          "required": false,
+          "array": false,
+          "size": 36,
+          "default": null
+        },
+        {
+          "key": "reply_to_text",
+          "type": "string",
+          "required": false,
+          "array": false,
+          "size": 500,
+          "default": null
+        },
+        {
+          "key": "reply_to_sender_name",
+          "type": "string",
+          "required": false,
+          "array": false,
+          "size": 128,
+          "default": null
+        },
+        {
+          "key": "reply_to_type",
+          "type": "string",
+          "required": false,
+          "array": false,
+          "size": 20,
+          "default": null
+        },
+        {
+          "key": "is_view_once",
+          "type": "boolean",
+          "required": false,
+          "array": false,
+          "default": false
+        },
+        {
+          "key": "is_viewed",
+          "type": "boolean",
+          "required": false,
+          "array": false,
+          "default": false
+        }
+      ]
+    },
+    {
+      "$id": "security_events",
+      "name": "security_events",
+      "enabled": true,
+      "documentSecurity": false,
+      "attributes": [
+        { "key": "user_id",    "type": "string", "required": false, "size": 64,   "default": null },
+        { "key": "event_type", "type": "string", "required": true,  "size": 64,   "default": null },
+        { "key": "severity",   "type": "string", "required": false, "size": 16,   "default": "INFO" },
+        { "key": "ip_address", "type": "string", "required": false, "size": 64,   "default": null },
+        { "key": "endpoint",   "type": "string", "required": false, "size": 256,  "default": null },
+        { "key": "method",     "type": "string", "required": false, "size": 16,   "default": null },
+        { "key": "user_agent", "type": "string", "required": false, "size": 512,  "default": null },
+        { "key": "details",    "type": "string", "required": false, "size": 4000, "default": null },
+        { "key": "actor_id",   "type": "string", "required": false, "size": 64,   "default": null },
+        { "key": "actor_role", "type": "string", "required": false, "size": 32,   "default": null },
+        { "key": "target_id",  "type": "string", "required": false, "size": 64,   "default": null },
+        { "key": "amount",     "type": "string", "required": false, "size": 32,   "default": null },
+        { "key": "currency",   "type": "string", "required": false, "size": 16,   "default": null },
+        { "key": "result",     "type": "string", "required": false, "size": 16,   "default": "success" }
+      ],
+      "indexes": [
+        { "key": "idx_user_id",    "type": "key", "attributes": ["user_id"],    "orders": ["ASC"]  },
+        { "key": "idx_event_type", "type": "key", "attributes": ["event_type"], "orders": ["ASC"]  },
+        { "key": "idx_severity",   "type": "key", "attributes": ["severity"],   "orders": ["ASC"]  },
+        { "key": "idx_actor_id",   "type": "key", "attributes": ["actor_id"],   "orders": ["ASC"]  },
+        { "key": "idx_created_at", "type": "key", "attributes": ["$createdAt"], "orders": ["DESC"] },
+        { "key": "idx_result",     "type": "key", "attributes": ["result"],     "orders": ["ASC"]  }
+      ]
+    }
+  ]
+}

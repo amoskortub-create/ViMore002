@@ -1,0 +1,88 @@
+name: Build AAB
+
+on:
+  workflow_dispatch:
+    inputs:
+      keystore_password:
+        description: 'Keystore password'
+        required: true
+        type: password
+      key_alias:
+        description: 'Key alias'
+        required: true
+        type: string
+        default: 'release'
+      key_password:
+        description: 'Key password'
+        required: true
+        type: password
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build web assets
+        run: npm run build
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Generate keystore
+        run: |
+          echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+
+      - name: Build AAB
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew bundleRelease
+        env:
+          KEYSTORE_PASSWORD: ${{ github.event.inputs.keystore_password }}
+          KEY_ALIAS: ${{ github.event.inputs.key_alias }}
+          KEY_PASSWORD: ${{ github.event.inputs.key_password }}
+
+      - name: Upload AAB to GitHub Release
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: android/app/build/outputs/bundle/release/app-release.aab
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v-${{ github.run_number }}
+          release_name: Release v-${{ github.run_number }}
+          body: 'AAB build ready for Play Store upload'
+          draft: false
+          prerelease: false
+
+      - name: Upload AAB to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: android/app/build/outputs/bundle/release/app-release.aab
+          asset_name: app-release.aab
+          asset_content_type: application/octet-stream

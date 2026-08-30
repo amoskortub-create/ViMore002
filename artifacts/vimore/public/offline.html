@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>ViMore — Offline</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0a0f;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .container {
+      padding: 2rem;
+      max-width: 320px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    .logo {
+      width: 80px;
+      height: 80px;
+      background: #9940E5;
+      border-radius: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .logo svg { width: 48px; height: 48px; }
+    .brand { font-size: 2rem; font-weight: 900; font-style: italic; letter-spacing: -0.04em; color: #fff; }
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: #9940E5;
+      background: rgba(153, 64, 229, 0.12);
+      border: 1px solid rgba(153, 64, 229, 0.25);
+      padding: 0.4rem 1rem;
+      border-radius: 9999px;
+    }
+    .status-dot { width: 6px; height: 6px; background: #9940E5; border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .title { font-size: 1.5rem; font-weight: 900; font-style: italic; text-transform: uppercase; letter-spacing: -0.03em; line-height: 1.2; }
+    .subtitle { font-size: 0.85rem; color: rgba(255,255,255,0.5); line-height: 1.6; }
+    .retry-btn {
+      width: 100%;
+      height: 52px;
+      background: #9940E5;
+      color: #fff;
+      border: none;
+      border-radius: 1rem;
+      font-size: 0.85rem;
+      font-weight: 900;
+      font-style: italic;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .retry-btn:hover { opacity: 0.9; }
+    .retry-btn:active { transform: scale(0.97); }
+    .cached-note { font-size: 0.7rem; color: rgba(255,255,255,0.3); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 7L10 19L17 7" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M13 15L17 7L21 15" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="brand">VIMORE</div>
+    <div class="status">
+      <div class="status-dot"></div>
+      You're offline
+    </div>
+    <div>
+      <div class="title">No connection</div>
+    </div>
+    <div class="subtitle">
+      Check your internet connection and try again. Your cached content is still available.
+    </div>
+    <button class="retry-btn" onclick="window.location.reload()">Retry connection</button>
+    <button class="retry-btn" style="background: rgba(153,64,229,0.15); border: 1px solid rgba(153,64,229,0.3);" onclick="window.history.back()">Go back</button>
+    <div class="cached-note">Cached pages remain accessible while offline</div>
+  </div>
+</body>
+</html>

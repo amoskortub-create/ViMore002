@@ -1,0 +1,112 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 270 45% 95%; /* #F2ECF7 - Light Ivory */
+    --foreground: 272 50% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 272 50% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 272 50% 10%;
+    --primary: 272 77% 57%; /* #9940E5 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 270 20% 90%;
+    --secondary-foreground: 272 77% 30%;
+    --muted: 270 20% 90%;
+    --muted-foreground: 272 10% 40%;
+    --accent: 224 100% 71%; /* #6E96FF */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 272 20% 88%;
+    --input: 272 20% 88%;
+    --ring: 272 77% 57%;
+    --radius: 1rem;
+  }
+  .dark {
+    --background: 272 50% 3%; /* Deep Space Black */
+    --foreground: 270 45% 95%;
+    --card: 272 40% 7%;
+    --card-foreground: 270 45% 95%;
+    --popover: 272 40% 7%;
+    --popover-foreground: 270 45% 95%;
+    --primary: 272 77% 57%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 272 30% 15%;
+    --secondary-foreground: 272 77% 85%;
+    --muted: 272 30% 15%;
+    --muted-foreground: 272 10% 65%;
+    --accent: 224 100% 71%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 272 30% 20%;
+    --input: 272 30% 20%;
+    --ring: 272 77% 57%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground transition-colors duration-500;
+  }
+}
+
+@keyframes soundbar {
+  0%, 100% { transform: scaleY(0.4); }
+  50%       { transform: scaleY(1); }
+}
+
+@keyframes count-pop {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.45); }
+  65%  { transform: scale(0.88); }
+  100% { transform: scale(1); }
+}
+
+.animate-count-pop {
+  animation: count-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: inline-block;
+}
+
+@keyframes badge-pop {
+  0%   { transform: scale(0); opacity: 0; }
+  60%  { transform: scale(1.25); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-badge-pop {
+  animation: badge-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes shake-vibe {
+  0% { transform: rotate(0deg); }
+  25% { transform: rotate(8deg); }
+  50% { transform: rotate(0deg); }
+  75% { transform: rotate(-8deg); }
+  100% { transform: rotate(0deg); }
+}
+
+.animate-shake-vibe {
+  animation: shake-vibe 0.4s ease-in-out infinite;
+}
+
+/* Custom Scrollbar for high-velocity feel */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.2);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.4);
+}

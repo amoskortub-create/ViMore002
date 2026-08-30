@@ -1,10 +1,11 @@
-# [Project name]
+# ViMore
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+ViMore is a social networking and creator platform with feeds, music, reels, messaging, marketplace tools, and creator features.
 
 ## Run & Operate
 
 - `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/vimore run dev` — run the imported ViMore Next.js app
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
@@ -22,23 +23,26 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/vimore/` — imported Next.js application and its Appwrite/Gemini integrations
+- `artifacts/api-server/` — shared API entrypoint; forwards unhandled `/api/*` requests to ViMore
+- `artifacts/vimore/appwrite.json` — Appwrite collection and bucket configuration
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- ViMore keeps Appwrite server access and Gemini access server-side through Replit Secrets.
+- The shared API service preserves `/api/healthz` and forwards ViMore API requests to avoid the workspace `/api` route collision.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+ViMore provides social feeds, messaging, music, reels, creator dashboards, marketplace listings, event ticketing, notifications, and an admin dashboard.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+The Appwrite and Gemini credentials must remain protected project secrets.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- The app expects `APPWRITE_API_KEY` and `GEMINI_API_KEY` as protected secrets; Gemini also supports the source repository's `GOOGLE_GENERATIVE_AI_API_KEY` name.
 
 ## Pointers
 

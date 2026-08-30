@@ -1,0 +1,53 @@
+modules = ["nodejs-18", "web", "java-graalvm22.3"]
+[agent]
+expertMode = true
+stack = "BEST_EFFORT_FALLBACK"
+integrations = ["javascript_gemini_ai_integrations:2.0.0"]
+
+[nix]
+channel = "stable-25_05"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "/nix/store/61lr9izijvg30pcribjdxgjxvh3bysp4-pnpm-10.26.1/bin/pnpm run dev"
+waitForPort = 5000
+
+[[ports]]
+localPort = 3000
+externalPort = 3001
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[userenv]
+
+[userenv.shared]
+NEXT_PUBLIC_APPWRITE_ENDPOINT = "https://appwrite.mediatechliberia.online/v1"
+NEXT_PUBLIC_APPWRITE_PROJECT_ID = "vimore123"
+APPWRITE_DATABASE_ID = "vimoreprod"
+NEXT_PUBLIC_APPWRITE_DATABASE_ID = "vimoreprod"
+NEXT_PUBLIC_AGORA_APP_ID = "4afa1dbbd2ee4695ad1d29eaa0310ca3"
+NEXT_PUBLIC_ZEGO_APP_ID = "1212624295"
+NEXT_PUBLIC_VAPID_PUBLIC_KEY = "BGRfT6eaMS4SJwWAA4ZM-IR32_qDO1xAoyq3N5LqF6kLgPXLdBrC1WExJEt0daf091gcfZhlSezLv4FqWCFikk0"
+VAPID_SUBJECT = "mailto:amoskortub@gmail.com"
+NEXT_PUBLIC_APP_URL = "https://31b77c01-ebde-40fe-86f9-29575b6bf324-00-1isg6rwr32lt9.janeway.replit.dev"

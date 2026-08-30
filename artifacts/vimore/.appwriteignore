@@ -1,0 +1,14 @@
+.next/
+node_modules/
+.git/
+.env
+.env.local
+.env.development
+.env.production
+README.md
+apphosting.yaml
+next.config.ts
+tailwind.config.ts
+postcss.config.js
+public/
+tsconfig.json

@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "ViMore"
+description = "A social networking and creator platform with feeds, music, reels, messaging, marketplace tools, and creator features."
+version = "1.0.0"
+id = "artifacts/vimore"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23778
+
+[services.development]
+run = "pnpm --filter @workspace/vimore run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/vimore", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/vimore/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23778"
+BASE_PATH = "/"

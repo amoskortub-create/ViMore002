@@ -1,0 +1,9 @@
+- [Appwrite 1.6 session cookie](appwrite-session-cookie.md) — server-to-server session creation returns empty secret in JSON; extract from Set-Cookie header instead
+- [Admin server-side auth guard](admin-auth-guard.md) — serverRoleChecked/serverAuthorized state must be declared before the `isUnauthorized` const in admin/page.tsx
+- [authFetch JWT bridge](auth-fetch.md) — Appwrite SDK uses localStorage (not cookies), so all Next.js API fetch calls must use authFetch which sends a JWT via Authorization header
+- [Verification flow](verification-flow.md) — verify route creates PENDING record, admin approves/rejects via dedicated routes; no optimistic is_verified on client
+- [Music collection permissions](music-permissions.md) — tracks only have owner-level read perms; use admin-backed /api/music/catalog route to bypass
+- [API function consolidation](api-function-consolidation.md) — Vercel Hobby caps at 12 functions; new endpoints go in src/server/api-impl/ + ROUTES map, never a new route.ts
+- [Client media and proxy pattern](server-auth-upload.md) — browser uploads use Appwrite SDK; media reads use the same-origin proxy, and microphone requires an allowing Permissions-Policy
+- [Live Appwrite schema drift](appwrite-schema-drift.md) — an imported schema snapshot can lag production; verify the live collection before fixing unknown-attribute errors
+- [Diamond transaction fee policy](diamond-transaction-fee-policy.md) — gifts, unlocks, and subscriptions use one 10% fee with a 1-Diamond minimum

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ViMore</string>
+    <string name="title_activity_main">ViMore</string>
+    <string name="package_name">cfd.mediatech.vimore</string>
+    <string name="custom_url_scheme">cfd.mediatech.vimore</string>
+</resources>

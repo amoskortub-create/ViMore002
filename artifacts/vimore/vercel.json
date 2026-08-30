@@ -1,0 +1,28 @@
+{
+  "installCommand": "corepack enable pnpm && pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm run build",
+  "framework": "nextjs",
+  "outputDirectory": ".next",
+  "functions": {
+    "src/app/api/[...path]/route.ts": {
+      "memory": 1024,
+      "maxDuration": 60
+    },
+    "src/app/api/admin/[...path]/route.ts": {
+      "memory": 1024,
+      "maxDuration": 30
+    },
+    "src/app/api/oauth/[...path]/route.ts": {
+      "memory": 512,
+      "maxDuration": 20
+    }
+  },
+  "env": {
+    "NEXT_PUBLIC_APPWRITE_ENDPOINT": "https://appwrite.mediatechliberia.online/v1",
+    "NEXT_PUBLIC_APPWRITE_PROJECT_ID": "vimore123",
+    "NEXT_PUBLIC_APPWRITE_DATABASE_ID": "vimoreprod",
+    "NEXT_PUBLIC_AGORA_APP_ID": "4afa1dbbd2ee4695ad1d29eaa0310ca3",
+    "NEXT_PUBLIC_VAPID_PUBLIC_KEY": "BGRfT6eaMS4SJwWAA4ZM-IR32_qDO1xAoyq3N5LqF6kLgPXLdBrC1WExJEt0daf091gcfZhlSezLv4FqWCFikk0",
+    "VAPID_SUBJECT": "mailto:amoskortub@gmail.com"
+  }
+}
