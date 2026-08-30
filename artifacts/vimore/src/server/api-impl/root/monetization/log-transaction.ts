@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAdminDatabases, DATABASE_ID } from '@/lib/appwrite-server';
+import { getSessionUser } from '@/lib/session';
 import { ID } from 'node-appwrite';
 
 const TRANSACTIONS = 'transactions';
@@ -8,19 +9,28 @@ const ITEM_TYPES = new Set(['post', 'music', 'gift_item']);
 
 export async function POST(req: Request) {
   try {
+    const session = await getSessionUser(req);
+    if (!session) {
+      return NextResponse.json({ error: 'You must be logged in to log a transaction.' }, { status: 401 });
+    }
+
     const body = await req.json();
     const db = getAdminDatabases();
     const amountLD = Number(body?.amountLD ?? 0);
     const transactionType = String(body?.transactionType || '');
     const itemType = body?.itemType ? String(body.itemType) : undefined;
-    if (!body?.senderUserId || !body?.receiverUserId || !TRANSACTION_TYPES.has(transactionType) || !Number.isInteger(amountLD) || amountLD < 1 || (itemType && !ITEM_TYPES.has(itemType))) {
+    const receiverUserId = String(body?.receiverUserId || '');
+    if (!receiverUserId || receiverUserId === session.userId || !TRANSACTION_TYPES.has(transactionType) || !Number.isInteger(amountLD) || amountLD < 1 || (itemType && !ITEM_TYPES.has(itemType))) {
       return NextResponse.json({ error: 'Invalid transaction payload.' }, { status: 400 });
     }
 
     const document = {
       transactionId: body?.transactionId || ID.unique(),
-      senderUserId: body?.senderUserId,
-      receiverUserId: body?.receiverUserId,
+      // Keep the authenticated legacy owner field populated. The live
+      // transactions collection requires this field for every document.
+      user_id: session.userId,
+      senderUserId: session.userId,
+      receiverUserId,
       transactionType,
       amountLD,
       ...(body?.itemId ? { itemId: body.itemId } : {}),
