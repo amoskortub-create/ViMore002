@@ -260,7 +260,7 @@ export function GiftHub() {
       const transactionResponse = await authFetch('/api/monetization/log-transaction', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ senderUserId: currentUser?.$id, receiverUserId: creatorUserId, transactionType: 'gift', amountLD: selectedGift.cost, itemId: selectedGift.id, itemType: 'gift_item' }),
+        body: JSON.stringify({ receiverUserId: creatorUserId, transactionType: 'gift', amountLD: selectedGift.cost, itemId: selectedGift.id, itemType: 'gift_item' }),
       });
       if (!transactionResponse.ok) throw new Error((await transactionResponse.json()).error || 'Could not create payment record.');
       window.location.href = dialerUri;
