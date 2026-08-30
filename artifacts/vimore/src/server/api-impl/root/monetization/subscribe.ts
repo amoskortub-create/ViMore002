@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
   const transactionId = ID.unique();
   await db.createDocument(DATABASE_ID, 'transactions', transactionId, {
     transactionId,
+    user_id: session.userId,
     senderUserId: session.userId,
     receiverUserId: creatorUserId,
     transactionType: 'subscription',
