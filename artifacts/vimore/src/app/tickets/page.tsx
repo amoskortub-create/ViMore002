@@ -213,7 +213,8 @@ export default function TicketsPage() {
       const ownerName = owner.display_name || owner.name || owner.username || 'Guest';
       const ownerAvatar = owner.avatar || owner.avatar_url || '';
       const ownerId = owner.$id;
-      await databases.updateDocument(DATABASE_ID, COL.USERS, currentUser.$id, { diamond_balance: (currentUser.diamond_balance || 0) - selectedEvent.ticket_price });
+      const nextBalance = (currentUser.creditBalance ?? currentUser.diamondBalance ?? 0) - selectedEvent.ticket_price;
+      await databases.updateDocument(DATABASE_ID, COL.USERS, currentUser.$id, { credit_balance: nextBalance, diamond_balance: nextBalance });
       const ticketDoc = await databases.createDocument(DATABASE_ID, COL.TICKETS, ID.unique(), {
         event_id: selectedEvent.$id, user_id: ownerId, serial_number: serial, is_used: false,
         event_title: selectedEvent.title, event_date: selectedEvent.event_date, event_venue: selectedEvent.venue,
