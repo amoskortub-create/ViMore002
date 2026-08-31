@@ -41,7 +41,7 @@ const schemas = [
     id: 'transactions', name: 'Transactions', permissions: [],
     attrs: [
       ['transactionId', 'string', { size: 36, required: true }], ['senderUserId', 'string', { size: 36, required: true }], ['receiverUserId', 'string', { size: 36, required: true }],
-      ['transactionType', 'enum', { elements: ['gift', 'subscription', 'unlock_post', 'unlock_music'], required: true }], ['amountLD', 'integer', { required: true, min: 1 }],
+      ['transactionType', 'enum', { elements: ['gift', 'subscription', 'unlock_post', 'unlock_music', 'store_boost', 'marketplace_boost', 'verification', 'currency_purchase'], required: true }], ['amountLD', 'integer', { required: true, min: 1 }],
       ['itemId', 'string', { size: 36 }], ['itemType', 'enum', { elements: ['post', 'music', 'gift_item'] }], ['orangeMoneyRef', 'string', { size: 128 }],
       ['status', 'enum', { elements: ['pending', 'completed', 'failed', 'cancelled'], required: true }], ['createdAt', 'datetime', { required: true }],
     ], indexes: [['transactionId', 'unique', ['transactionId']], ['senderUserId', 'key', ['senderUserId']], ['receiverUserId', 'key', ['receiverUserId']], ['transactionType', 'key', ['transactionType']], ['amountLD', 'key', ['amountLD']], ['status', 'key', ['status']], ['createdAt', 'key', ['createdAt']]],
