@@ -218,15 +218,23 @@ export async function boostStoreWithDiamonds(
   await Promise.all([
     databases.updateDocument(DATABASE_ID, COL.STORES, storeId, { boost_until: newUntil }),
     databases.updateDocument(DATABASE_ID, COL.USERS, ownerId, {
+      credit_balance: currentDiamondBalance - cost,
       diamond_balance: currentDiamondBalance - cost,
     }),
     databases.createDocument(DATABASE_ID, COL.TRANSACTIONS, ID.unique(), {
       user_id: ownerId,
+      transactionId: ID.unique(),
+      senderUserId: ownerId,
+      receiverUserId: ownerId,
+      transactionType: 'store_boost',
+      amountLD: cost,
+      itemId: storeId,
+      createdAt: new Date().toISOString(),
       type: 'STORE_BOOST',
       currency: 'DIAMOND',
       amount: -cost,
       description: `Store boost: ${days} day${days > 1 ? 's' : ''} for "${store.store_name}"`,
-      status: 'completed',
+      status: 'COMPLETED',
     }, [Permission.read(Role.user(ownerId))]),
   ]);
 
