@@ -25,6 +25,11 @@ export async function POST(req: NextRequest) {
   await db.createDocument(DATABASE_ID, 'transactions', transactionId, {
     transactionId,
     user_id: session.userId,
+    type: 'SUBSCRIPTION',
+    amount: PRICE_LD,
+    currency: 'LD',
+    description: `Subscription payment to @${creator.username || creatorUserId}`,
+    reference_id: creatorUserId,
     senderUserId: session.userId,
     receiverUserId: creatorUserId,
     transactionType: 'subscription',
