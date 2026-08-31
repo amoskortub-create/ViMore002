@@ -23,7 +23,7 @@ export function StoreBoostDialog({ store, onBoosted, children }: StoreBoostDialo
   const [boosting, setBoosting] = useState(false);
 
   const cost = days * STORE_BOOST_DIAMONDS_PER_DAY;
-  const balance = currentUser?.diamondBalance || 0;
+  const balance = currentUser?.creditBalance ?? currentUser?.diamondBalance ?? 0;
   const canAfford = balance >= cost;
   const alreadyBoosted = isStoreBoosted(store);
   const boostUntilDate = store.boost_until ? new Date(store.boost_until) : null;
@@ -34,7 +34,7 @@ export function StoreBoostDialog({ store, onBoosted, children }: StoreBoostDialo
     try {
       const newUntil = await boostStoreWithDiamonds(store.$id, currentUser.$id, days, balance);
       if (setCurrentUserState) {
-        setCurrentUserState((prev: any) => prev ? { ...prev, diamondBalance: balance - cost } : null);
+         setCurrentUserState((prev: any) => prev ? { ...prev, creditBalance: balance - cost, diamondBalance: balance - cost } : null);
       }
       toast({
         title: "Store Boosted!",
