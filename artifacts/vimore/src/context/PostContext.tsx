@@ -4323,6 +4323,13 @@ export function PostProvider({ children }: { children: ReactNode }) {
         try {
           await databases.createDocument(DATABASE_ID, COL.TRANSACTIONS, ID.unique(), {
             user_id: currentUser.$id,
+            transactionId: ID.unique(),
+            senderUserId: currentUser.$id,
+            receiverUserId: currentUser.$id,
+            transactionType: 'marketplace_boost',
+            amountLD: credits,
+            itemId: productId,
+            createdAt: new Date().toISOString(),
             type: 'MARKETPLACE_BOOST',
             currency: 'CREDIT',
             amount: -credits,
