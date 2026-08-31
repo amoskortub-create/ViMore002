@@ -101,6 +101,12 @@ export async function POST(req: NextRequest) {
         // Sender transaction record
         db.createDocument(DATABASE_ID, COL.TRANSACTIONS, ID.unique(), {
           user_id: session.userId,
+          transactionId: ID.unique(),
+          senderUserId: session.userId,
+          receiverUserId: recipientId,
+          transactionType: 'gift',
+          amountLD: cost,
+          createdAt: new Date().toISOString(),
           type: 'GIFT_SENT',
           currency: 'CREDIT',
           amount: cost,
@@ -111,6 +117,12 @@ export async function POST(req: NextRequest) {
         // Recipient transaction record
         db.createDocument(DATABASE_ID, COL.TRANSACTIONS, ID.unique(), {
           user_id: recipientId,
+          transactionId: ID.unique(),
+          senderUserId: session.userId,
+          receiverUserId: recipientId,
+          transactionType: 'gift',
+          amountLD: creatorShare,
+          createdAt: new Date().toISOString(),
           type: 'GIFT_RECEIVED',
           currency: 'CREDIT',
           amount: creatorShare,
