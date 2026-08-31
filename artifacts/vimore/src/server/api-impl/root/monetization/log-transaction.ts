@@ -6,6 +6,12 @@ import { ID } from 'node-appwrite';
 const TRANSACTIONS = 'transactions';
 const TRANSACTION_TYPES = new Set(['gift', 'subscription', 'unlock_post', 'unlock_music']);
 const ITEM_TYPES = new Set(['post', 'music', 'gift_item']);
+const LEGACY_TYPES: Record<string, string> = {
+  gift: 'GIFT_SENT',
+  subscription: 'SUBSCRIPTION',
+  unlock_post: 'POST_UNLOCK',
+  unlock_music: 'MUSIC_UNLOCK',
+};
 
 export async function POST(req: Request) {
   try {
@@ -29,6 +35,13 @@ export async function POST(req: Request) {
       // Keep the authenticated legacy owner field populated. The live
       // transactions collection requires this field for every document.
       user_id: session.userId,
+      type: LEGACY_TYPES[transactionType],
+      amount: amountLD,
+      currency: 'LD',
+      description: `${transactionType.replace('_', ' ')} payment`,
+      reference_id: body?.itemId || receiverUserId,
+      from_user_id: session.userId,
+      to_user_id: receiverUserId,
       senderUserId: session.userId,
       receiverUserId,
       transactionType,
