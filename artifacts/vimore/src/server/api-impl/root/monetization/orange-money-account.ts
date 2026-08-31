@@ -27,7 +27,10 @@ export async function POST(req: NextRequest) {
   const db = getAdminDatabases();
   const existing = await db.listDocuments(DATABASE_ID, COLLECTION, [Query.equal('userId', session.userId), Query.limit(1)]);
   const now = new Date().toISOString();
-  const data = { userId: session.userId, orangeMoneyNumber, accountName, isVerified: false, createdAt: existing.documents[0]?.createdAt || now, updatedAt: now };
+  // A valid, owner-submitted number is the account verification step in the
+  // current Orange Money flow. Preserve this state when the account is edited
+  // instead of resetting it to false on every save.
+  const data = { userId: session.userId, orangeMoneyNumber, accountName, isVerified: true, createdAt: existing.documents[0]?.createdAt || now, updatedAt: now };
   const account = existing.documents[0]
     ? await db.updateDocument(DATABASE_ID, COLLECTION, existing.documents[0].$id, data)
     : await db.createDocument(DATABASE_ID, COLLECTION, session.userId, data);
