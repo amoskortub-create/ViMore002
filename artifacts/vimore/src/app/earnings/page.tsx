@@ -80,7 +80,7 @@ export default function EarningsPage() {
       const response = await authFetch('/api/monetization/orange-money-account', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accountName: orangeMoneyName.trim(), orangeMoneyNumber: orangeMoneyNumber.trim() }) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Could not save account.');
-      setAccountStatus("Saved. Pending verification before payments can be received.");
+      setAccountStatus(result.account?.isVerified ? "Saved and verified. Payments can be received." : "Saved. Pending verification before payments can be received.");
       toast({ title: "Orange Money account saved" });
     } catch (error: any) {
       setAccountStatus(error.message);
