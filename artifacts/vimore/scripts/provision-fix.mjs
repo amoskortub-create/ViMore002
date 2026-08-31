@@ -38,6 +38,7 @@ const FIXED_ATTRS = [
   { col: 'users', key: 'posts_count',             type: 'integer', defaultValue: 0 },
   { col: 'users', key: 'gold_balance',            type: 'float',   defaultValue: 0 },
   { col: 'users', key: 'diamond_balance',         type: 'float',   defaultValue: 0 },
+  { col: 'users', key: 'credit_balance',          type: 'float',   defaultValue: 0 },
   { col: 'users', key: 'star_balance',            type: 'float',   defaultValue: 0 },
   { col: 'users', key: 'role',                    type: 'string',  size: 32, defaultValue: 'USER' },
   // posts
