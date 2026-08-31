@@ -69,10 +69,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Recipient user not found' }, { status: 404 });
     }
 
+    const isCreditPurchase = coinType === 'Diamond';
     const balanceField =
-      coinType === 'Diamond' ? 'diamond_balance' :
-      coinType === 'Star'    ? 'star_balance'    : 'gold_balance';
-    const currentBalance: number = Number(userDoc[balanceField] ?? 0);
+      isCreditPurchase ? 'credit_balance' :
+      coinType === 'Star' ? 'star_balance' : 'gold_balance';
+    const currentBalance: number = Number(
+      isCreditPurchase ? (userDoc.credit_balance ?? userDoc.diamond_balance ?? 0) : (userDoc[balanceField] ?? 0)
+    );
     const newBalance = parseFloat((currentBalance + coinAmount).toFixed(8));
 
     // Mark approved first so double-approval is caught by the status check above.
@@ -83,9 +86,9 @@ export async function POST(req: NextRequest) {
     });
 
     // Credit balance
-    await db.updateDocument(DATABASE_ID, COL.USERS, userId, {
-      [balanceField]: newBalance,
-    });
+    await db.updateDocument(DATABASE_ID, COL.USERS, userId, isCreditPurchase
+      ? { credit_balance: newBalance, diamond_balance: newBalance }
+      : { [balanceField]: newBalance });
 
     // These records are useful but must not turn a successful approval into a
     // false "Action Failed" if an older Appwrite schema is missing an optional
@@ -94,6 +97,12 @@ export async function POST(req: NextRequest) {
     try {
       await db.createDocument(DATABASE_ID, COL.TRANSACTIONS, ID.unique(), {
         user_id: userId,
+        transactionId: ID.unique(),
+        senderUserId: userId,
+        receiverUserId: userId,
+        transactionType: 'currency_purchase',
+        amountLD: Math.round(coinAmount),
+        createdAt: new Date().toISOString(),
         type: 'CURRENCY_PURCHASE',
         currency: coinType.toUpperCase(),
         amount: coinAmount,
