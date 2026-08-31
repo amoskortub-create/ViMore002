@@ -22,7 +22,23 @@ export async function POST(req: NextRequest) {
   if (!isValidOrangeMoneyNumber(number)) return NextResponse.json({ error: 'This creator has no verified Orange Money account.' }, { status: 404 });
 
   const transactionId = ID.unique();
-  await db.createDocument(DATABASE_ID, 'transactions', transactionId, { transactionId, user_id: session.userId, senderUserId: session.userId, receiverUserId: creatorUserId, transactionType: 'unlock_post', amountLD, itemId: postId, itemType: 'post', status: 'pending', createdAt: new Date().toISOString() });
+  await db.createDocument(DATABASE_ID, 'transactions', transactionId, {
+    transactionId,
+    user_id: session.userId,
+    type: 'POST_UNLOCK',
+    amount: amountLD,
+    currency: 'LD',
+    description: `Post unlock payment for ${postId}`,
+    reference_id: postId,
+    senderUserId: session.userId,
+    receiverUserId: creatorUserId,
+    transactionType: 'unlock_post',
+    amountLD,
+    itemId: postId,
+    itemType: 'post',
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+  });
   const ussd = generateUSSD(number, amountLD);
   return NextResponse.json({ ok: true, transactionId, amountLD, dialerUri: `tel:${ussd.replace('#', '%23')}` });
 }
