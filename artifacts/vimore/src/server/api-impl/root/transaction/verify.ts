@@ -99,6 +99,12 @@ export async function POST(req: NextRequest) {
         } as any),
         db.createDocument(DATABASE_ID, COL.TRANSACTIONS, ID.unique(), {
           user_id: session.userId,
+          transactionId: ID.unique(),
+          senderUserId: session.userId,
+          receiverUserId: session.userId,
+          transactionType: 'verification',
+          amountLD: parsedCost,
+          createdAt: new Date().toISOString(),
           type: 'VERIFICATION_FEE',
           currency: normalizedCurrency,
           amount: parsedCost,
