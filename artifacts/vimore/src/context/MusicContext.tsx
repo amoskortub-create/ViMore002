@@ -156,7 +156,7 @@ function mapDocToTrack(doc: any): Track {
     likes: doc.likes_count || 0,
     comments: doc.comments_count || 0,
     isBoosted: doc.is_boosted || false,
-    boostExpiry: doc.boost_expiry || undefined,
+     boostExpiry: doc.boost_expiry ? new Date(doc.boost_expiry).getTime() : undefined,
     isLocked: doc.is_locked || false,
     unlockPrice: doc.unlock_price || 0,
   };

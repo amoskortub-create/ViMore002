@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDatabases, DATABASE_ID } from '@/lib/appwrite-server';
 import { getSessionUser } from '@/lib/session';
 import { rateLimit } from '@/lib/rate-limit';
-import { ID, Query } from 'node-appwrite';
+import { ID } from 'node-appwrite';
 
 export const maxDuration = 30;
 
@@ -63,15 +63,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, alreadyVerified: true });
     }
 
-    const existingPending = await db.listDocuments(DATABASE_ID, COL.VERIFICATION_RECORDS, [
-      Query.equal('user_id', session.userId),
-      Query.equal('status', 'PENDING'),
-      Query.limit(1),
-    ]);
-    if (existingPending.total > 0) {
-      return NextResponse.json({ ok: true, status: 'PENDING', alreadyPending: true });
-    }
-
     const balanceField = normalizedCurrency === 'DIAMOND' ? 'diamond_balance' : 'star_balance';
     const currentBalance: number = Math.round(Number(userDoc[balanceField] ?? 0));
 
@@ -83,23 +74,33 @@ export async function POST(req: NextRequest) {
     }
 
     const newBalance = currentBalance - parsedCost;
+    const verificationExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const verificationRecordId = ID.unique();
+    const transactionId = ID.unique();
 
     await db.updateDocument(DATABASE_ID, COL.USERS, session.userId, {
       [balanceField]: newBalance,
+      is_verified: true,
+      has_ever_been_verified: true,
+      verification_expiry: verificationExpiry,
     });
 
     try {
       await Promise.all([
-        db.createDocument(DATABASE_ID, COL.VERIFICATION_RECORDS, ID.unique(), {
+        db.createDocument(DATABASE_ID, COL.VERIFICATION_RECORDS, verificationRecordId, {
           user_id: session.userId,
           type: 'CREATOR',
-          status: 'PENDING',
+          status: 'APPROVED',
           currency: normalizedCurrency,
           amount: parsedCost,
+          submitted_at: new Date().toISOString(),
+          reviewed_by: 'SYSTEM',
+          approved_by: 'SYSTEM',
+          approved_at: new Date().toISOString(),
         } as any),
-        db.createDocument(DATABASE_ID, COL.TRANSACTIONS, ID.unique(), {
+        db.createDocument(DATABASE_ID, COL.TRANSACTIONS, transactionId, {
           user_id: session.userId,
-          transactionId: ID.unique(),
+          transactionId,
           senderUserId: session.userId,
           receiverUserId: session.userId,
           transactionType: 'verification',
@@ -108,20 +109,29 @@ export async function POST(req: NextRequest) {
           type: 'VERIFICATION_FEE',
           currency: normalizedCurrency,
           amount: parsedCost,
-          description: 'Creator verification fee (pending admin review)',
-          status: 'PENDING',
+          description: 'Creator verification fee',
+          status: 'COMPLETED',
         } as any),
       ]);
     } catch {
       try {
         await db.updateDocument(DATABASE_ID, COL.USERS, session.userId, {
           [balanceField]: currentBalance,
+          is_verified: userDoc.is_verified ?? false,
+          has_ever_been_verified: userDoc.has_ever_been_verified ?? false,
+          verification_expiry: userDoc.verification_expiry ?? null,
         });
       } catch { }
       throw new Error('Failed to create verification record.');
     }
 
-    return NextResponse.json({ ok: true, status: 'PENDING', newBalance });
+    return NextResponse.json({
+      ok: true,
+      status: 'ACTIVE',
+      newBalance,
+      verificationExpiry,
+      verificationRecordId,
+    });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || 'Verification failed.' }, { status: 500 });
   }

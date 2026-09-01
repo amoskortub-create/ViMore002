@@ -15,6 +15,13 @@ const WINDOW_MS = 72 * 60 * 60 * 1000;
 const DEDUP_HOURS = 20;
 const ADMIN_ROLES = new Set(['SUPER', 'MODERATOR']);
 
+function expiryTime(value: unknown): number | null {
+  if (!value) return null;
+  if (typeof value === 'number') return value;
+  const asNumber = Number(value);
+  return Number.isFinite(asNumber) ? asNumber : Date.parse(String(value));
+}
+
 async function alreadyAlerted(
   db: ReturnType<typeof getAdminDatabases>,
   userId: string,
@@ -81,7 +88,7 @@ export async function GET(req: NextRequest) {
         if (cursor) queries.push(Query.cursorAfter(cursor));
         const page = await db.listDocuments(DATABASE_ID, COL.POSTS, queries);
         for (const doc of page.documents) {
-          const expiry = doc.boost_expiry ? Number(doc.boost_expiry) : null;
+          const expiry = expiryTime(doc.boost_expiry);
           if (!expiry || expiry <= now || expiry > windowEnd) continue;
           const ownerId = doc.user_id;
           if (!ownerId) continue;
@@ -104,7 +111,7 @@ export async function GET(req: NextRequest) {
         if (cursor) queries.push(Query.cursorAfter(cursor));
         const page = await db.listDocuments(DATABASE_ID, COL.TRACKS, queries);
         for (const doc of page.documents) {
-          const expiry = doc.boost_expiry ? Number(doc.boost_expiry) : null;
+          const expiry = expiryTime(doc.boost_expiry);
           if (!expiry || expiry <= now || expiry > windowEnd) continue;
           const ownerId = doc.user_id;
           if (!ownerId) continue;
@@ -127,7 +134,7 @@ export async function GET(req: NextRequest) {
         if (cursor) queries.push(Query.cursorAfter(cursor));
         const page = await db.listDocuments(DATABASE_ID, COL.USERS, queries);
         for (const doc of page.documents) {
-          const expiry = doc.verification_expiry ? Number(doc.verification_expiry) : null;
+          const expiry = expiryTime(doc.verification_expiry);
           if (!expiry || expiry <= now || expiry > windowEnd) continue;
           const hrs = hoursLeft(expiry);
           const title = '✅ Verification Badge Expiring Soon';

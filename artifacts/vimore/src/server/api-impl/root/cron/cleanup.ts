@@ -13,6 +13,13 @@ const COL = {
 const BATCH = 100;
 const ADMIN_ROLES = new Set(['SUPER', 'MODERATOR']);
 
+function expiryTime(value: unknown): number | null {
+  if (!value) return null;
+  if (typeof value === 'number') return value;
+  const asNumber = Number(value);
+  return Number.isFinite(asNumber) ? asNumber : Date.parse(String(value));
+}
+
 async function resetExpiredBoostedDocs(
   db: ReturnType<typeof getAdminDatabases>,
   collectionId: string,
@@ -26,7 +33,7 @@ async function resetExpiredBoostedDocs(
     if (cursor) queries.push(Query.cursorAfter(cursor));
     const page = await db.listDocuments(DATABASE_ID, collectionId, queries);
     for (const doc of page.documents) {
-      const expiry = doc.boost_expiry ? Number(doc.boost_expiry) : null;
+      const expiry = expiryTime(doc.boost_expiry);
       if (expiry !== null && expiry <= now) {
         await db.updateDocument(DATABASE_ID, collectionId, doc.$id, resetFields);
         fixed++;
@@ -46,7 +53,7 @@ async function resetExpiredVerifications(db: ReturnType<typeof getAdminDatabases
     if (cursor) queries.push(Query.cursorAfter(cursor));
     const page = await db.listDocuments(DATABASE_ID, COL.USERS, queries);
     for (const doc of page.documents) {
-      const expiry = doc.verification_expiry ? Number(doc.verification_expiry) : null;
+      const expiry = expiryTime(doc.verification_expiry);
       if (expiry !== null && expiry <= now) {
         await db.updateDocument(DATABASE_ID, COL.USERS, doc.$id, { is_verified: false });
         fixed++;

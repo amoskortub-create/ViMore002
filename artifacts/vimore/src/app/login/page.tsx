@@ -416,6 +416,10 @@ export default function LoginPage() {
               </div>
 
               <div className="mt-8 grid grid-cols-3 gap-3 animate-in fade-in duration-1000 delay-300">
+                <div className="col-span-3 text-center -mb-1">
+                  <p className="text-[11px] font-black uppercase tracking-[0.28em] text-[#9940E5]">Our Visions</p>
+                  <p className="text-[10px] text-gray-400 font-medium mt-1">Connecting creators, culture, and opportunity everywhere.</p>
+                </div>
                 {[
                   { icon: Users, value: "2M+", label: t('auth_creators') },
                   { icon: Star, value: "4.9★", label: t('auth_rating') },

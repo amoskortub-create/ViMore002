@@ -446,7 +446,7 @@ function mapDocToUser(authUser: Models.User<Models.Preferences>, doc: Models.Doc
     role: (doc.role as 'SUPER' | 'FINANCIAL' | 'MODERATOR' | 'USER') || 'USER',
     joinDate: doc.join_date || authUser.$createdAt,
     hasEverBeenVerified: doc.has_ever_been_verified || false,
-    verificationExpiry: doc.verification_expiry || undefined,
+     verificationExpiry: doc.verification_expiry ? new Date(doc.verification_expiry).getTime() : undefined,
     language: doc.language || '',
     status: (doc.status as 'active' | 'suspended' | 'banned') || 'active',
     suspendedUntil: doc.suspended_until || undefined,
@@ -482,7 +482,7 @@ function mapProfileDocToUser(doc: Models.Document): User {
     role: (doc.role as 'SUPER' | 'FINANCIAL' | 'MODERATOR' | 'USER') || 'USER',
     joinDate: doc.join_date || doc.$createdAt,
     hasEverBeenVerified: doc.has_ever_been_verified || false,
-    verificationExpiry: doc.verification_expiry || undefined,
+     verificationExpiry: doc.verification_expiry ? new Date(doc.verification_expiry).getTime() : undefined,
     language: doc.language || '',
     status: (doc.status as 'active' | 'suspended' | 'banned') || 'active',
     suspendedUntil: doc.suspended_until || undefined,
@@ -550,8 +550,8 @@ function mapDocToPost(doc: Models.Document, authorDoc?: Models.Document): Post {
     commentsDisabled: doc.comments_disabled || false,
     isLocked: doc.is_locked || false,
     unlockPrice: doc.unlock_price,
-    boostExpiry: doc.boost_expiry ? Number(doc.boost_expiry) : undefined,
-    isBoosted: (doc.is_boosted || false) && (!doc.boost_expiry || Number(doc.boost_expiry) > Date.now()),
+     boostExpiry: doc.boost_expiry ? new Date(doc.boost_expiry).getTime() : undefined,
+     isBoosted: (doc.is_boosted || false) && (!doc.boost_expiry || new Date(doc.boost_expiry).getTime() > Date.now()),
     boostTargetViews: doc.boost_target_views,
     boostCurrentViews: doc.boost_current_views || 0,
     poll,
@@ -3107,22 +3107,24 @@ export function PostProvider({ children }: { children: ReactNode }) {
       toast({ title: "Already Verified ✅", description: "Your account is already verified." });
       return;
     }
-    if (data.alreadyPending) {
-      toast({ title: "Pending Review ⏳", description: "Your verification request is already under admin review." });
-      return;
-    }
     // Deduct balance optimistically now that server confirmed
     if (typeof data.newBalance === 'number') {
       setCurrentUserState(prev => {
         if (!prev) return null;
-        return currency === 'DIAMOND'
-          ? { ...prev, diamondBalance: data.newBalance }
-          : { ...prev, starBalance: data.newBalance };
+        return {
+          ...prev,
+          isVerified: data.status === 'ACTIVE' ? true : prev.isVerified,
+          hasEverBeenVerified: data.status === 'ACTIVE' ? true : prev.hasEverBeenVerified,
+          verificationExpiry: data.verificationExpiry || prev.verificationExpiry,
+          ...(currency === 'DIAMOND'
+            ? { diamondBalance: data.newBalance, creditBalance: data.newBalance }
+            : { starBalance: data.newBalance }),
+        };
       });
     }
     toast({
-      title: "Verification Submitted ⏳",
-      description: "Your request is under admin review. You'll be notified once approved.",
+      title: "Verification Active ✅",
+      description: "Your verification badge is live for 30 days.",
     });
   }, [currentUser, toast]);
 
@@ -3824,15 +3826,16 @@ export function PostProvider({ children }: { children: ReactNode }) {
       );
     }
 
-    const expiry = Date.now() + duration * 86400000;
+    const expiryMs = Date.now() + duration * 86400000;
+    const expiry = new Date(expiryMs).toISOString();
     const balanceUpdate = { credit_balance: currentBalance - totalCost, diamond_balance: currentBalance - totalCost };
 
     if (type === 'POST') {
       // Optimistic update
-      setPostsState(prev => prev.map(p => p.$id === nodeId ? { ...p, isBoosted: true, boostExpiry: expiry } : p));
+       setPostsState(prev => prev.map(p => p.$id === nodeId ? { ...p, isBoosted: true, boostExpiry: expiryMs } : p));
       try {
         await Promise.all([
-          databases.updateDocument(DATABASE_ID, COL.POSTS, nodeId, { is_boosted: true, boost_expiry: expiry }),
+           databases.updateDocument(DATABASE_ID, COL.POSTS, nodeId, { is_boosted: true, boost_expiry: expiry }),
           databases.updateDocument(DATABASE_ID, COL.USERS, currentUser.$id, balanceUpdate),
         ]);
         setCurrentUserState(prev => {
@@ -3847,7 +3850,7 @@ export function PostProvider({ children }: { children: ReactNode }) {
     } else if (type === 'SONIC') {
       try {
         await Promise.all([
-          databases.updateDocument(DATABASE_ID, COL.TRACKS, nodeId, { is_boosted: true, boost_expiry: expiry }),
+           databases.updateDocument(DATABASE_ID, COL.TRACKS, nodeId, { is_boosted: true, boost_expiry: expiry }),
           databases.updateDocument(DATABASE_ID, COL.USERS, currentUser.$id, balanceUpdate),
         ]);
         setCurrentUserState(prev => {
@@ -4094,7 +4097,7 @@ export function PostProvider({ children }: { children: ReactNode }) {
       try {
         const userDoc = await databases.getDocument(DATABASE_ID, COL.USERS, currentUser.$id);
         const balance = userDoc.credit_balance ?? userDoc.diamond_balance ?? 0;
-        const expiry = userDoc.verification_expiry as number | undefined;
+        const expiry = userDoc.verification_expiry ? new Date(userDoc.verification_expiry).getTime() : undefined;
         const COST = 8;
         if (userDoc.is_verified && expiry && expiry > Date.now()) {
           return { status: 'already_verified' as const, expiry };
@@ -4102,10 +4105,12 @@ export function PostProvider({ children }: { children: ReactNode }) {
         if (balance < COST) {
           return { status: 'insufficient_balance' as const, balance };
         }
-        const newExpiry = Date.now() + 30 * 24 * 60 * 60 * 1000;
+        const newExpiryMs = Date.now() + 30 * 24 * 60 * 60 * 1000;
+        const newExpiry = new Date(newExpiryMs).toISOString();
         const newBalance = balance - COST;
         await databases.updateDocument(DATABASE_ID, COL.USERS, currentUser.$id, {
           is_verified: true,
+          has_ever_been_verified: true,
           verification_expiry: newExpiry,
           credit_balance: newBalance,
           diamond_balance: newBalance,
@@ -4115,9 +4120,9 @@ export function PostProvider({ children }: { children: ReactNode }) {
           isVerified: true,
           diamondBalance: newBalance,
           creditBalance: newBalance,
-          verificationExpiry: newExpiry,
+          verificationExpiry: newExpiryMs,
         } : null);
-        return { status: 'success' as const, expiry: newExpiry };
+        return { status: 'success' as const, expiry: newExpiryMs };
       } catch (e: any) {
         throw e;
       }

@@ -41,6 +41,7 @@ const FIXED_ATTRS = [
   { col: 'users', key: 'credit_balance',          type: 'float',   defaultValue: 0 },
   { col: 'users', key: 'star_balance',            type: 'float',   defaultValue: 0 },
   { col: 'users', key: 'role',                    type: 'string',  size: 32, defaultValue: 'USER' },
+  { col: 'users', key: 'verification_expiry',     type: 'datetime' },
   // posts
   { col: 'posts', key: 'likes_count',             type: 'integer', defaultValue: 0 },
   { col: 'posts', key: 'unlikes_count',           type: 'integer', defaultValue: 0 },
@@ -52,6 +53,16 @@ const FIXED_ATTRS = [
   { col: 'posts', key: 'comments_disabled',       type: 'boolean', defaultValue: false },
   // posts.shared_post_data hit the attribute limit — reduce to 4000
   { col: 'posts', key: 'shared_post_data',        type: 'string',  size: 4000 },
+  // tracks
+  { col: 'tracks', key: 'is_boosted',             type: 'boolean', defaultValue: false },
+  { col: 'tracks', key: 'boost_current_views',   type: 'integer', defaultValue: 0 },
+  { col: 'tracks', key: 'boost_expiry',           type: 'datetime' },
+  // verification_records
+  { col: 'verification_records', key: 'approved_by',       type: 'string', size: 36 },
+  { col: 'verification_records', key: 'approved_at',       type: 'datetime' },
+  { col: 'verification_records', key: 'rejected_by',       type: 'string', size: 36 },
+  { col: 'verification_records', key: 'rejected_at',       type: 'datetime' },
+  { col: 'verification_records', key: 'rejection_reason',  type: 'string', size: 1000 },
   // ai_messages.content hit limit — reduce to 4000
   { col: 'ai_messages', key: 'content',           type: 'string',  size: 4000 },
 ];
@@ -70,6 +81,9 @@ async function createFixedAttr(a) {
         break;
       case 'boolean':
         await db.createBooleanAttribute(DATABASE_ID, a.col, a.key, false, a.defaultValue ?? null, false);
+        break;
+      case 'datetime':
+        await db.createDatetimeAttribute(DATABASE_ID, a.col, a.key, false, a.defaultValue ?? null);
         break;
     }
     console.log(`  ✅  Attr ${a.col}.${a.key}`);
