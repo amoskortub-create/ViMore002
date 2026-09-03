@@ -255,25 +255,34 @@ export default function MarketplaceChatPage() {
   // ── Voice recording ───────────────────────────────────────────────────────
   const [recording, setRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  const recordingTimeRef = useRef(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const startRecording = async () => {
     try {
+      if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+        throw new Error("Voice recording is not supported on this device.");
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mr = new MediaRecorder(stream);
+      const mimeType = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"]
+        .find(type => MediaRecorder.isTypeSupported(type));
+      const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       chunksRef.current = [];
       mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mr.onstop = async () => {
         stream.getTracks().forEach(t => t.stop());
-        const duration = recordingTime;
+        const duration = recordingTimeRef.current;
         setRecordingTime(0);
-        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        recordingTimeRef.current = 0;
+        const actualMimeType = mr.mimeType || mimeType || "audio/webm";
+        const blob = new Blob(chunksRef.current, { type: actualMimeType });
         if (blob.size < 100) return;
         setSending(true);
         try {
-          const voiceFile = new File([blob], "voice.webm", { type: "audio/webm" });
+          const extension = actualMimeType.includes("mp4") ? "mp4" : "webm";
+          const voiceFile = new File([blob], `voice-${Date.now()}.${extension}`, { type: actualMimeType });
           const bucketId = BUCKET.VOICE_MESSAGES;
           const fileId = await uploadViaClient(voiceFile, bucketId);
           await sendMsg({
@@ -282,23 +291,29 @@ export default function MarketplaceChatPage() {
             mediaId: fileId,
             voiceDuration: formatRecordingTime(duration),
           });
+        } catch {
+          alert("Voice message could not be uploaded. Please check your connection and try again.");
         } finally {
           setSending(false);
         }
       };
       mediaRecorderRef.current = mr;
-      mr.start();
+      mr.start(100);
       setRecording(true);
+      recordingTimeRef.current = 0;
       setRecordingTime(0);
-      timerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000);
-    } catch {
-      alert("Microphone access denied. Please allow microphone access to send voice messages.");
+      timerRef.current = setInterval(() => {
+        recordingTimeRef.current += 1;
+        setRecordingTime(recordingTimeRef.current);
+      }, 1000);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Microphone access denied. Please allow microphone access to send voice messages.");
     }
   };
 
   const stopRecording = () => {
     if (timerRef.current) clearInterval(timerRef.current);
-    mediaRecorderRef.current?.stop();
+    if (mediaRecorderRef.current?.state === "recording") mediaRecorderRef.current.stop();
     setRecording(false);
   };
 

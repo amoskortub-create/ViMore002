@@ -144,7 +144,7 @@ export function ChatInput({ onSend, onTyping, onStopTyping }: ChatInputProps) {
   };
 
   const startRecording = async () => {
-    if (!navigator.mediaDevices?.getUserMedia) {
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
       toast({ variant: "destructive", title: "Not Supported", description: "Your browser does not support voice recording." });
       return;
     }
@@ -169,6 +169,11 @@ export function ChatInput({ onSend, onTyping, onStopTyping }: ChatInputProps) {
 
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) recordingChunksRef.current.push(e.data);
+      };
+      recorder.onerror = () => {
+        stream.getTracks().forEach(t => t.stop());
+        setIsRecording(false);
+        toast({ variant: 'destructive', title: 'Recording Failed', description: 'The microphone stopped unexpectedly.' });
       };
 
       mediaRecorderRef.current = recorder;
@@ -204,6 +209,12 @@ export function ChatInput({ onSend, onTyping, onStopTyping }: ChatInputProps) {
 
     mediaRecorderRef.current.onstop = () => {
       const blob = new Blob(recordingChunksRef.current, { type: mimeType });
+      if (blob.size < 100) {
+        toast({ variant: 'destructive', title: 'Recording Empty', description: 'No audio was captured. Please try again.' });
+        streamRef.current?.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+        return;
+      }
       const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
       const file = new File([blob], `voice-${Date.now()}.${ext}`, { type: mimeType });
       const url = URL.createObjectURL(blob);
