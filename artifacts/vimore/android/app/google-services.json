@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "192343153020",
+    "project_id": "studio-2489916673-37593",
+    "storage_bucket": "studio-2489916673-37593.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:192343153020:android:d7c1e3036aa1e8138c6cf9",
+        "android_client_info": {
+          "package_name": "cfd.mediatech.vimore"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAfQFMG6-d4BX1SWLR7bIrrNLfoGmsFJWk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

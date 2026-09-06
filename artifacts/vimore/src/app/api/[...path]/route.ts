@@ -32,6 +32,7 @@ import * as Presence from '@/server/api-impl/root/presence';
 import * as PushSend from '@/server/api-impl/root/push/send';
 import * as PushSubscribe from '@/server/api-impl/root/push/subscribe';
 import * as PushUnsubscribe from '@/server/api-impl/root/push/unsubscribe';
+import * as NativePushSubscribe from '@/server/api-impl/root/push/native-subscribe';
 import * as TransactionGift from '@/server/api-impl/root/transaction/gift';
 import * as TransactionLockPost from '@/server/api-impl/root/transaction/lock-post';
 import * as TransactionSubscribe from '@/server/api-impl/root/transaction/subscribe';
@@ -88,6 +89,7 @@ const ROUTES: Record<string, Handler> = {
   'push/send': PushSend,
   'push/subscribe': PushSubscribe,
   'push/unsubscribe': PushUnsubscribe,
+  'push/native-subscribe': NativePushSubscribe,
   'transaction/gift': TransactionGift,
   'transaction/lock-post': TransactionLockPost,
   'transaction/subscribe': TransactionSubscribe,

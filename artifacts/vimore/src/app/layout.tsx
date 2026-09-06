@@ -32,6 +32,7 @@ import { PullToRefresh } from "@/components/layout/pull-to-refresh";
 import { ActivityTracker } from "@/components/layout/ActivityTracker";
 import { ExpiryCleanup } from "@/components/layout/expiry-cleanup";
 import { PushAutoSubscribe } from "@/components/layout/push-auto-subscribe";
+import { NativePushAutoSubscribe } from "@/components/layout/native-push-auto-subscribe";
 import { NotificationScheduler } from "@/components/layout/notification-scheduler";
 import { GlobalRealtimeListener } from "@/components/layout/global-realtime";
 import { OutboxRetry } from "@/components/layout/outbox-retry";
@@ -274,6 +275,7 @@ export default async function RootLayout({
                                 <NotificationScheduler />
                                 <AppBadgeSync />
                                 <PushAutoSubscribe />
+                                <NativePushAutoSubscribe />
                                 <PullToRefresh />
                                 <ActivityTracker />
                                 <ExpiryCleanup />

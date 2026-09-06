@@ -2,6 +2,9 @@ package cfd.mediatech.vimore;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.os.Build;
 import android.webkit.PermissionRequest;
 import android.webkit.WebSettings;
 
@@ -18,12 +21,26 @@ public class MainActivity extends BridgeActivity {
 	@Override
 	public void onCreate(android.os.Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		createNotificationChannel();
 		if (getBridge() != null) {
 			getBridge().getWebView().getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
 			getBridge().getWebView().getSettings().setDomStorageEnabled(true);
 			getBridge().getWebView().setWebChromeClient(new ViMoreWebChromeClient(getBridge()));
 		}
 		requestMediaAndLocationPermissions();
+	}
+
+	private void createNotificationChannel() {
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+			NotificationChannel channel = new NotificationChannel(
+				"vimore_default",
+				"ViMore notifications",
+				NotificationManager.IMPORTANCE_DEFAULT
+			);
+			channel.setDescription("Messages, activity, and updates from ViMore");
+			NotificationManager manager = getSystemService(NotificationManager.class);
+			if (manager != null) manager.createNotificationChannel(channel);
+		}
 	}
 
 	private void requestMediaAndLocationPermissions() {
