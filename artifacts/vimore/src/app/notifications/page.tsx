@@ -64,7 +64,7 @@ export default function NotificationsPage() {
   const { toast } = useToast();
   const { t } = useTranslation();
   const { notifications, markAsRead, markAllAsRead, purgeSignal } = useNotifications();
-  const { setSelectedPostId, isFollowing, triggerHaptic, currentUser } = usePosts();
+  const { isFollowing, triggerHaptic, currentUser } = usePosts();
   const { setTrack, currentTrack, isExpanded, globalSongs } = useMusic();
   const [activeFilter, setActiveFilter] = useState("all");
   const isPlayerActive = currentTrack && !isExpanded;
@@ -79,7 +79,7 @@ export default function NotificationsPage() {
   const handleClick = (node: NotificationNode) => {
     triggerHaptic(10);
     markAsRead(node.id);
-    if (node.postId) { setSelectedPostId(node.postId); }
+    if (node.postId) { router.push(`/post/${node.postId}`); }
     else if (node.trackId) {
       const track = globalSongs.find((s) => String(s.id) === String(node.trackId));
       if (track) { setTrack(track); router.push("/music"); }
@@ -94,7 +94,7 @@ export default function NotificationsPage() {
     else if (node.trackId) {
       const track = globalSongs.find((s) => String(s.id) === String(node.trackId));
       if (track) { setTrack(track); router.push("/music"); }
-    } else if (node.postId) { setSelectedPostId(node.postId); }
+    } else if (node.postId) { router.push(`/post/${node.postId}`); }
     else if (node.actionHref) { router.push(node.actionHref); }
   };
 

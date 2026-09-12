@@ -329,35 +329,15 @@ export function PostCard(props: PostCardProps) {
       comments: newOverride.comments ?? comments,
       shares:   newOverride.shares   ?? shares,
     };
-    pendingRef.current = next;
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      const p = pendingRef.current;
-      if (!p) return;
-      setLiveCounts(prev => {
-        let changed: 'likes' | 'unlikes' | 'comments' | 'shares' | null = null;
-        if (p.likes !== prev.likes) changed = 'likes';
-        else if (p.unlikes !== prev.unlikes) changed = 'unlikes';
-        else if (p.comments !== prev.comments) changed = 'comments';
-        else if (p.shares !== prev.shares) changed = 'shares';
-        if (changed && isVisibleRef.current) {
-          setAnimField(changed);
-          setTimeout(() => setAnimField(null), 400);
-        }
-        return {
-          likes: p.likes ?? prev.likes,
-          unlikes: p.unlikes ?? prev.unlikes,
-          comments: p.comments ?? prev.comments,
-          shares: p.shares ?? prev.shares,
-        };
-      });
-    }, 280);
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    setLiveCounts(prev => {
+      const changed = (Object.keys(next) as (keyof typeof next)[]).find(key => next[key] !== prev[key]);
+      if (changed && isVisibleRef.current) {
+        setAnimField(changed);
+        setTimeout(() => setAnimField(null), 400);
+      }
+      return next;
+    });
   }, [postCountOverrides[$id], likes, unlikes, comments, shares, $id]);
-
-  useEffect(() => {
-    setLiveCounts({ likes, unlikes, comments, shares });
-  }, [likes, unlikes, comments, shares]);
 
   const userVote = useMemo(() => {
     if (!poll || !poll.voters || !currentUser) return null;
@@ -427,8 +407,14 @@ export function PostCard(props: PostCardProps) {
 
   const isSensitiveNode = settings.isSensitivityFilterActive && !isRevealedManually && !isOwner && !isCampaign && (allImages.length > 0 || !!videoUrl);
 
-  const handleLike = () => { triggerHaptic(20); toggleLikePost($id); };
-  const handleUnlike = () => { triggerHaptic(15); toggleUnlikePost($id); };
+  const handleLike = () => {
+    triggerHaptic(20);
+    toggleLikePost($id, { likes: liveCounts.likes, unlikes: liveCounts.unlikes });
+  };
+  const handleUnlike = () => {
+    triggerHaptic(15);
+    toggleUnlikePost($id, { likes: liveCounts.likes, unlikes: liveCounts.unlikes });
+  };
   const handleSave = () => { triggerHaptic(5); toggleSavePost($id); toast({ description: isBookmarked ? "Removed" : "Noted ✨" }); };
 
   const handleDelete = async () => {

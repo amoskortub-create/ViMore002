@@ -191,17 +191,24 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const markAsRead = useCallback((id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-    databases.updateDocument(DATABASE_ID, COL.NOTIFICATIONS, id, { is_read: true }).catch(() => { /* ignore */ });
+    fetch('/api/notifications/mark-read', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notificationIds: [id] }),
+    }).catch(() => { /* optimistic UI; retry on refresh if the server is unavailable */ });
   }, []);
 
   const markAllAsRead = useCallback(() => {
-    setNotifications(prev => {
-      prev.filter(n => !n.isRead).forEach(n => {
-        databases.updateDocument(DATABASE_ID, COL.NOTIFICATIONS, n.id, { is_read: true }).catch(() => { /* ignore */ });
-      });
-      return prev.map(n => ({ ...n, isRead: true }));
-    });
-  }, []);
+    const unreadIds = notifications.filter(n => !n.isRead).map(n => n.id);
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    if (unreadIds.length > 0) {
+      fetch('/api/notifications/mark-read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notificationIds: unreadIds }),
+      }).catch(() => { /* optimistic UI; retry on refresh if the server is unavailable */ });
+    }
+  }, [notifications]);
 
   const purgeSignal = useCallback((id: string) => {
     // Remove from UI immediately

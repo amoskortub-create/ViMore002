@@ -144,24 +144,34 @@ export function ChatInput({ onSend, onTyping, onStopTyping }: ChatInputProps) {
   };
 
   const startRecording = async () => {
-    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+    const legacyGetUserMedia = (navigator as any).getUserMedia
+      || (navigator as any).webkitGetUserMedia
+      || (navigator as any).mozGetUserMedia;
+    const getUserMedia = navigator.mediaDevices?.getUserMedia?.bind(navigator.mediaDevices)
+      || (legacyGetUserMedia
+        ? (constraints: MediaStreamConstraints) => new Promise<MediaStream>((resolve, reject) => legacyGetUserMedia.call(navigator, constraints, resolve, reject))
+        : null);
+
+    if (!getUserMedia || typeof MediaRecorder === 'undefined') {
       toast({ variant: "destructive", title: "Not Supported", description: "Your browser does not support voice recording." });
       return;
     }
 
     try {
       triggerHaptic(20);
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      });
       streamRef.current = stream;
       setMicPermission('granted');
 
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : MediaRecorder.isTypeSupported('audio/webm')
-          ? 'audio/webm'
-          : MediaRecorder.isTypeSupported('audio/mp4')
-            ? 'audio/mp4'
-            : '';
+      const supportedMimeTypes = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/ogg;codecs=opus',
+        'audio/mp4',
+      ];
+      const mimeType = supportedMimeTypes.find((candidate) => MediaRecorder.isTypeSupported(candidate)) || '';
 
       const recorderOptions = mimeType ? { mimeType } : {};
       const recorder = new MediaRecorder(stream, recorderOptions);
@@ -177,7 +187,7 @@ export function ChatInput({ onSend, onTyping, onStopTyping }: ChatInputProps) {
       };
 
       mediaRecorderRef.current = recorder;
-      recorder.start(100);
+      recorder.start(250);
 
       setIsRecording(true);
       recordingSecondsRef.current = 0;
@@ -215,7 +225,7 @@ export function ChatInput({ onSend, onTyping, onStopTyping }: ChatInputProps) {
         streamRef.current = null;
         return;
       }
-      const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+      const ext = mimeType.includes('mp4') ? 'm4a' : mimeType.includes('ogg') ? 'ogg' : 'webm';
       const file = new File([blob], `voice-${Date.now()}.${ext}`, { type: mimeType });
       const url = URL.createObjectURL(blob);
 

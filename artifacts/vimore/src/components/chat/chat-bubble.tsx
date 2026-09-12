@@ -231,10 +231,6 @@ export function ChatBubble({
 
   const handleViewOnce = () => {
     if (isViewed) return;
-    if (!isDownloaded && !isMe) {
-      handleDownload();
-      return;
-    }
     triggerHaptic(30);
     onViewOnceOpen?.(id);
   };
@@ -431,7 +427,7 @@ export function ChatBubble({
               </button>
             )}
 
-            {type === "voice" && (
+            {type === "voice" && !(isViewOnce && !isMe) && (
               <div className={cn(
                 "flex items-center gap-3 px-4 py-3 min-w-[220px] max-w-[280px]",
               )}>
@@ -496,7 +492,7 @@ export function ChatBubble({
               </div>
             )}
 
-            {isViewOnce && (type === "photo" || type === "video") && (
+            {isViewOnce && !isMe && (
               <div className="p-3 min-w-[200px]">
                 {isViewed ? (
                   <div className="flex items-center gap-3 text-white/60 dark:text-muted-foreground italic py-2">
@@ -705,7 +701,7 @@ export function ChatBubble({
               </div>
             )}
 
-            {text && (
+            {text && !(isViewOnce && !isMe) && (
               <div className="px-3 sm:px-4 py-2 sm:py-3">
                 {isEditing ? (
                   <div className="space-y-2">

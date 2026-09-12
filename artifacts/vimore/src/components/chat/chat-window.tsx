@@ -86,7 +86,7 @@ interface ChatWindowProps {
 }
 
 export function ChatWindow({ contact, onBack }: ChatWindowProps) {
-  const { currentUser, triggerHaptic, leaveCluster, connections = [], addMemberToCluster, updateCluster, settings, chatMessages, sendChatMessage, uploadMedia, friendUsernames, acceptedStrangerUsernames, acceptMessageRequest, declineMessageRequest, deleteMessage, editMessage, clusterMemberReceipts } = usePosts();
+  const { currentUser, triggerHaptic, leaveCluster, connections = [], addMemberToCluster, updateCluster, settings, chatMessages, sendChatMessage, markChatMessageViewed, uploadMedia, friendUsernames, acceptedStrangerUsernames, acceptMessageRequest, declineMessageRequest, deleteMessage, editMessage, clusterMemberReceipts } = usePosts();
   const { tier: netTier } = useNetwork();
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -606,6 +606,7 @@ export function ChatWindow({ contact, onBack }: ChatWindowProps) {
                   status={settings.showReadReceipts ? msg.status : 'sent'}
                   seenByAvatars={seenByMap[msg.$id] || []}
                   onExternalLink={handleExternalLink}
+                   onViewOnceOpen={(msgId) => markChatMessageViewed(msgId, contactId)}
                   onDelete={(msgId) => deleteMessage(msgId, contactId)}
                   onEdit={(msgId, newText) => editMessage(msgId, contactId, newText)}
                   onReply={(msgId) => {

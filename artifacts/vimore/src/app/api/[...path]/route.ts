@@ -22,10 +22,12 @@ import * as MarketplaceMessagesList from '@/server/api-impl/root/marketplace/mes
 import * as MarketplaceMessagesSend from '@/server/api-impl/root/marketplace/messages/send';
 import * as MessagesMarkRead from '@/server/api-impl/root/messages/mark-read';
 import * as MessagesSend from '@/server/api-impl/root/messages/send';
+import * as MessagesViewOnce from '@/server/api-impl/root/messages/view-once';
 import * as Moderate from '@/server/api-impl/root/moderate';
 import * as MusicCatalog from '@/server/api-impl/root/music/catalog';
 import * as MusicStream from '@/server/api-impl/root/music/stream';
 import * as NotificationsDelete from '@/server/api-impl/root/notifications-delete';
+import * as NotificationsMarkRead from '@/server/api-impl/root/notifications-mark-read';
 import * as PaymentApprove from '@/server/api-impl/root/payment/approve';
 import * as PaymentReject from '@/server/api-impl/root/payment/reject';
 import * as Presence from '@/server/api-impl/root/presence';
@@ -79,10 +81,12 @@ const ROUTES: Record<string, Handler> = {
   'marketplace/messages/send': MarketplaceMessagesSend,
   'messages/mark-read': MessagesMarkRead,
   'messages/send': MessagesSend,
+  'messages/view-once': MessagesViewOnce,
   'moderate': Moderate,
   'music/catalog': MusicCatalog,
   'music/stream': MusicStream,
   'notifications/delete': NotificationsDelete,
+  'notifications/mark-read': NotificationsMarkRead,
   'payment/approve': PaymentApprove,
   'payment/reject': PaymentReject,
   'presence': Presence,

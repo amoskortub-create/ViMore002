@@ -276,8 +276,8 @@ interface PostContextType {
   editPost: (postId: string, updates: { content?: string; hashtags?: string[] }) => Promise<void>;
   deleteMessage: (messageId: string, chatId: string) => Promise<void>;
   editMessage: (messageId: string, chatId: string, newText: string) => Promise<void>;
-  toggleLikePost: (postId: string) => Promise<void>;
-  toggleUnlikePost: (postId: string) => Promise<void>;
+  toggleLikePost: (postId: string, counts?: { likes: number; unlikes: number }) => Promise<void>;
+  toggleUnlikePost: (postId: string, counts?: { likes: number; unlikes: number }) => Promise<void>;
   toggleSavePost: (postId: string) => void;
   updateCurrentUser: (data: Partial<User>) => Promise<void>;
   updateSettings: (data: Partial<AppSettings>) => void;
@@ -360,6 +360,7 @@ interface PostContextType {
   replyToTicket: (ticketUserId: string, ticketId: string, reply: string) => Promise<void>;
   submitTicket: (data: { subject: string; message: string; category: string; priority?: string }) => Promise<void>;
   sendChatMessage: (recipientId: string, message: Partial<ChatMessage>) => Promise<void>;
+  markChatMessageViewed: (messageId: string, chatId: string) => Promise<void>;
   sendMessageRequest: (targetUserId: string, targetUser: User, text: string) => Promise<void>;
   purgeVibeCache: () => Promise<void>;
   archiveIdentityNode: () => Promise<void>;
@@ -2499,13 +2500,18 @@ export function PostProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const toggleLikePost = async (id: string) => {
+  const toggleLikePost = async (id: string, counts?: { likes: number; unlikes: number }) => {
     if (!currentUser) return;
     if (pendingReactionIdsRef.current.has(id)) return;
     pendingReactionIdsRef.current.add(id);
 
     const wasLiked = likedPostIds.has(id);
     const wasUnliked = unlikedPostIds.has(id);
+    const sourcePost = posts.find(p => p.$id === id);
+    const baseLikes = counts?.likes ?? sourcePost?.likes ?? 0;
+    const baseUnlikes = counts?.unlikes ?? sourcePost?.unlikes ?? 0;
+    const optimisticLikes = Math.max(0, baseLikes + (wasLiked ? -1 : 1));
+    const optimisticUnlikes = Math.max(0, baseUnlikes - (wasUnliked ? 1 : 0));
 
     setLikedPostIdsState(prev => { const n = new Set(prev); if (wasLiked) n.delete(id); else n.add(id); return n; });
     setUnlikedPostIdsState(prev => { const n = new Set(prev); n.delete(id); return n; });
@@ -2514,6 +2520,10 @@ export function PostProvider({ children }: { children: ReactNode }) {
       likes: Math.max(0, p.likes + (wasLiked ? -1 : 1)),
       unlikes: wasUnliked ? Math.max(0, p.unlikes - 1) : p.unlikes,
     } : p));
+    setPostCountOverrides(prev => ({
+      ...prev,
+      [id]: { ...(prev[id] || {}), likes: optimisticLikes, unlikes: optimisticUnlikes },
+    }));
 
     try {
       const action = wasLiked ? 'remove-like' : 'like';
@@ -2530,6 +2540,14 @@ export function PostProvider({ children }: { children: ReactNode }) {
         likes: data.likesCount ?? p.likes,
         unlikes: data.unlikesCount ?? p.unlikes,
       } : p));
+      setPostCountOverrides(prev => ({
+        ...prev,
+        [id]: {
+          ...(prev[id] || {}),
+          likes: data.likesCount ?? optimisticLikes,
+          unlikes: data.unlikesCount ?? optimisticUnlikes,
+        },
+      }));
       if (!wasLiked) {
         const likedPost = posts.find(p => p.$id === id);
         if (likedPost && likedPost.user.$id !== currentUser.$id) {
@@ -2556,18 +2574,27 @@ export function PostProvider({ children }: { children: ReactNode }) {
         likes: Math.max(0, p.likes + (wasLiked ? 1 : -1)),
         unlikes: wasUnliked ? p.unlikes + 1 : p.unlikes,
       } : p));
+      setPostCountOverrides(prev => ({
+        ...prev,
+        [id]: { ...(prev[id] || {}), likes: baseLikes, unlikes: baseUnlikes },
+      }));
       toast({ variant: 'destructive', title: 'Reaction Failed', description: formatErrorDescription(err, currentUser?.role) });
     } finally {
       pendingReactionIdsRef.current.delete(id);
     }
   };
 
-  const toggleUnlikePost = async (id: string) => {
+  const toggleUnlikePost = async (id: string, counts?: { likes: number; unlikes: number }) => {
     if (!currentUser) return;
     if (pendingReactionIdsRef.current.has(id)) return;
     pendingReactionIdsRef.current.add(id);
     const wasUnliked = unlikedPostIds.has(id);
     const wasLiked = likedPostIds.has(id);
+    const sourcePost = posts.find(p => p.$id === id);
+    const baseLikes = counts?.likes ?? sourcePost?.likes ?? 0;
+    const baseUnlikes = counts?.unlikes ?? sourcePost?.unlikes ?? 0;
+    const optimisticLikes = Math.max(0, baseLikes - (wasLiked ? 1 : 0));
+    const optimisticUnlikes = Math.max(0, baseUnlikes + (wasUnliked ? -1 : 1));
 
     setUnlikedPostIdsState(prev => { const n = new Set(prev); if (wasUnliked) n.delete(id); else n.add(id); return n; });
     setLikedPostIdsState(prev => { const n = new Set(prev); n.delete(id); return n; });
@@ -2576,6 +2603,10 @@ export function PostProvider({ children }: { children: ReactNode }) {
       unlikes: Math.max(0, p.unlikes + (wasUnliked ? -1 : 1)),
       likes: wasLiked ? Math.max(0, p.likes - 1) : p.likes,
     } : p));
+    setPostCountOverrides(prev => ({
+      ...prev,
+      [id]: { ...(prev[id] || {}), likes: optimisticLikes, unlikes: optimisticUnlikes },
+    }));
 
     try {
       const action = wasUnliked ? 'remove-unlike' : 'unlike';
@@ -2592,6 +2623,14 @@ export function PostProvider({ children }: { children: ReactNode }) {
         likes: data.likesCount ?? p.likes,
         unlikes: data.unlikesCount ?? p.unlikes,
       } : p));
+      setPostCountOverrides(prev => ({
+        ...prev,
+        [id]: {
+          ...(prev[id] || {}),
+          likes: data.likesCount ?? optimisticLikes,
+          unlikes: data.unlikesCount ?? optimisticUnlikes,
+        },
+      }));
     } catch (err: any) {
       logAppwriteError('toggleUnlikePost', err);
       setUnlikedPostIdsState(prev => { const n = new Set(prev); if (wasUnliked) n.add(id); else n.delete(id); return n; });
@@ -2601,6 +2640,10 @@ export function PostProvider({ children }: { children: ReactNode }) {
         unlikes: Math.max(0, p.unlikes + (wasUnliked ? 1 : -1)),
         likes: wasLiked ? p.likes + 1 : p.likes,
       } : p));
+      setPostCountOverrides(prev => ({
+        ...prev,
+        [id]: { ...(prev[id] || {}), likes: baseLikes, unlikes: baseUnlikes },
+      }));
       toast({ variant: 'destructive', title: 'Reaction Failed', description: formatErrorDescription(err, currentUser?.role) });
     } finally {
       pendingReactionIdsRef.current.delete(id);
@@ -2628,9 +2671,21 @@ export function PostProvider({ children }: { children: ReactNode }) {
       const real = mapDocToComment(doc);
       setActiveComments(prev => prev.map(c => c.$id === optimistic.$id ? real : c));
       const commentedPost = posts.find(p => p.$id === postId);
-      await databases.updateDocument(DATABASE_ID, COL.POSTS, postId, {
-        comments_count: (commentedPost?.comments || 0) + 1,
-      });
+      if (commentedPost) {
+        const nextComments = commentedPost.comments + 1;
+        await databases.updateDocument(DATABASE_ID, COL.POSTS, postId, {
+          comments_count: nextComments,
+        });
+        applyPostCountUpdate(postId, { comments: nextComments });
+      } else {
+        // Posts opened from notifications are not always present in the feed cache.
+        const postDoc: any = await databases.getDocument(DATABASE_ID, COL.POSTS, postId);
+        const nextComments = Number(postDoc.comments_count || 0) + 1;
+        await databases.updateDocument(DATABASE_ID, COL.POSTS, postId, {
+          comments_count: nextComments,
+        });
+        applyPostCountUpdate(postId, { comments: nextComments });
+      }
       if (commentedPost && commentedPost.user.$id !== currentUser.$id) {
         databases.createDocument(DATABASE_ID, COL.NOTIFICATIONS, ID.unique(), {
           user_id: commentedPost.user.$id,
@@ -2645,7 +2700,10 @@ export function PostProvider({ children }: { children: ReactNode }) {
           is_read: false,
         }).catch(() => {});
       }
-    } catch { /* keep optimistic */ }
+    } catch (err) {
+      setActiveComments(prev => prev.filter(c => c.$id !== optimistic.$id));
+      throw err;
+    }
   };
 
   const addReply = async (postId: string, parentId: string, text: string) => {
@@ -2913,6 +2971,8 @@ export function PostProvider({ children }: { children: ReactNode }) {
         sender_name: currentUser.name || currentUser.username,
         type: message.type || 'text',
         is_read: false,
+        is_view_once: message.isViewOnce === true,
+        is_viewed: false,
       };
       if (!isClusterMsg) {
         const recipientConn = connections.find(c => c.username === recipientId);
@@ -2980,6 +3040,32 @@ export function PostProvider({ children }: { children: ReactNode }) {
       throw err;
     }
   }, [currentUser, toast, clusters, connections]);
+
+  const markChatMessageViewed = useCallback(async (messageId: string, chatId: string) => {
+    if (!currentUser || !messageId || !chatId) return;
+
+    const isGroupChat = clustersRef.current.some(cl => cl.$id === chatId);
+    setChatMessages(prev => ({
+      ...prev,
+      [chatId]: (prev[chatId] || []).map(message =>
+        message.$id === messageId ? { ...message, isViewed: true, mediaUrl: undefined } : message
+      ),
+    }));
+
+    try {
+      const response = await fetch('/api/messages/view-once', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId, chatId, isGroup: isGroupChat }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data?.error || 'Could not mark message as viewed.');
+      }
+    } catch (err) {
+      logAppwriteError('markChatMessageViewed', err);
+    }
+  }, [currentUser, logAppwriteError]);
 
   const sendMessageRequest = useCallback(async (targetUserId: string, targetUser: User, text: string) => {
     if (!currentUser || !text.trim()) return;
@@ -3910,6 +3996,7 @@ export function PostProvider({ children }: { children: ReactNode }) {
     },
     uploadMedia,
     addPost, deletePost, editPost, deleteMessage, editMessage, toggleLikePost, toggleUnlikePost,
+    markChatMessageViewed,
     toggleSavePost: async (id: string) => {
       const wasSaved = savedPostIds.has(id);
       setSavedPostIdsState(p => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; });
