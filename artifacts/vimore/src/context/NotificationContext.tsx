@@ -75,6 +75,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   // Tracks IDs currently being deleted so polls don't re-add them
   const pendingDeletions = React.useRef<Set<string>>(new Set());
+  // Handles a user opening an optimistic notification before its Appwrite
+  // document has finished being created.
+  const pendingReads = React.useRef<Set<string>>(new Set());
 
   const loadNotifications = useCallback(async (userId: string) => {
     try {
@@ -134,9 +137,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   }, [settings]);
 
   const addSignal = useCallback((signal: Omit<NotificationNode, 'id' | 'time' | 'isRead'>) => {
+    const localId = 'notif_' + Date.now();
     const newNotif: NotificationNode = {
       ...signal,
-      id: 'notif_' + Date.now(),
+      id: localId,
       time: 'Just now',
       isRead: false,
     };
@@ -163,9 +167,19 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       if (signal.actionHref) notifData.action_href = signal.actionHref;
       if (signal.actionLabel) notifData.action_label = signal.actionLabel;
       if (signal.avatar) notifData.avatar = signal.avatar;
-      databases.createDocument(DATABASE_ID, COL.NOTIFICATIONS, ID.unique(), notifData).catch((err) => {
-        console.error('addSignal DB write failed:', err);
-      });
+      databases.createDocument(DATABASE_ID, COL.NOTIFICATIONS, ID.unique(), notifData)
+        .then((doc) => {
+          // Replace the temporary optimistic ID with the persisted Appwrite ID.
+          // Without this, marking the optimistic item read cannot update the
+          // document that loadNotifications reads after a reload.
+          setNotifications(prev => prev.map(n => n.id === localId ? { ...n, id: doc.$id } : n));
+          if (pendingReads.current.delete(localId)) {
+            databases.updateDocument(DATABASE_ID, COL.NOTIFICATIONS, doc.$id, { is_read: true }).catch(() => {});
+          }
+        })
+        .catch((err) => {
+          console.error('addSignal DB write failed:', err);
+        });
 
       // Deliver a Web Push to the recipient for ALL notification types
       // (SOCIAL, SONIC, POST, SYSTEM, ADMIN, etc.) — works in background too.
@@ -191,6 +205,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const markAsRead = useCallback((id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+    if (id.startsWith('notif_')) pendingReads.current.add(id);
     fetch('/api/notifications/mark-read', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -201,6 +216,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const markAllAsRead = useCallback(() => {
     const unreadIds = notifications.filter(n => !n.isRead).map(n => n.id);
     setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    unreadIds.filter(id => id.startsWith('notif_')).forEach(id => pendingReads.current.add(id));
     if (unreadIds.length > 0) {
       fetch('/api/notifications/mark-read', {
         method: 'POST',

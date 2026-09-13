@@ -197,7 +197,7 @@ export default function VerifiedBenefitsPage() {
                 color: "text-green-500",
                 bg: "bg-green-500/10",
                 title: "Loyalty Renewal Discount",
-                desc: "Returning verified creators renew at a lower price — 6 Credits or 20,000 Stars instead of the usual 8 Credits / 25,000 Stars. Reward for staying committed.",
+                desc: "Verified creators renew for 20 Credits or 20,000 Stars and keep their creator status active.",
               },
               {
                 icon: TrendingUp,
@@ -261,7 +261,7 @@ export default function VerifiedBenefitsPage() {
           <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground px-1">How to Earn Your Badge</p>
           <div className="bg-white dark:bg-white/4 border border-black/5 dark:border-white/8 rounded-3xl p-5 shadow-sm space-y-4">
             <p className="text-xs text-muted-foreground font-medium leading-relaxed">
-              You need either <strong className="text-foreground">8 Credits</strong> or <strong className="text-foreground">25,000 Stars</strong> to activate your badge for 30 days. Here are the fastest ways to earn them:
+              You need either <strong className="text-foreground">20 Credits</strong> or <strong className="text-foreground">25,000 Stars</strong> to activate your badge for 30 days. Here are the fastest ways to earn them:
             </p>
             <div className="space-y-3">
               {[
@@ -302,7 +302,7 @@ export default function VerifiedBenefitsPage() {
           <div className="flex items-start gap-2.5 bg-green-500/8 border border-green-500/15 rounded-2xl p-3">
             <RefreshCw className="h-3.5 w-3.5 text-green-500 mt-0.5 shrink-0" />
             <p className="text-[10px] text-green-700 dark:text-green-400 font-medium leading-relaxed">
-              <strong>Loyalty discount:</strong> Returning creators renew for just <strong>6 Credits</strong> or <strong>20,000 Stars</strong> — automatically applied if you've been verified before.
+              Verification renewals cost <strong>20 Credits</strong> or <strong>20,000 Stars</strong>.
             </p>
           </div>
         </section>

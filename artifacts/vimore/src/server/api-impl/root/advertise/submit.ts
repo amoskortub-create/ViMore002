@@ -3,12 +3,13 @@ import { getAdminDatabases, DATABASE_ID } from '@/lib/appwrite-server';
 import { getSessionUser } from '@/lib/session';
 import { rateLimit, sanitizeIp } from '@/lib/rate-limit';
 import { ID } from 'node-appwrite';
+import { CREDIT_PRICES } from '@/lib/credit-pricing';
 
 export const maxDuration = 30;
 
 const USERS_COL = 'users';
 const CAMPAIGNS_COL = 'ad_campaigns';
-const CREDITS_PER_DAY = 3;
+const CREDITS_PER_DAY = CREDIT_PRICES.adPerDay;
 const MIN_DAYS = 5;
 const MAX_DAYS = 90;
 

@@ -218,7 +218,8 @@ export function ChatInput({ onSend, onTyping, onStopTyping }: ChatInputProps) {
     const mimeType = mediaRecorderRef.current.mimeType || 'audio/webm';
 
     mediaRecorderRef.current.onstop = () => {
-      const blob = new Blob(recordingChunksRef.current, { type: mimeType });
+      const chunks = recordingChunksRef.current.slice();
+      const blob = new Blob(chunks, { type: mimeType });
       if (blob.size < 100) {
         toast({ variant: 'destructive', title: 'Recording Empty', description: 'No audio was captured. Please try again.' });
         streamRef.current?.getTracks().forEach(t => t.stop());
@@ -231,16 +232,20 @@ export function ChatInput({ onSend, onTyping, onStopTyping }: ChatInputProps) {
 
       triggerHaptic(30);
       onSend("", {
+        isViewOnce: isViewOnceEnabled,
         mediaUrl: url,
         mediaType: 'voice',
         duration,
         file,
       });
+      recordingChunksRef.current = [];
 
       streamRef.current?.getTracks().forEach(t => t.stop());
       streamRef.current = null;
     };
 
+    // Android WebView may hold the last chunk until requestData/stop.
+    try { mediaRecorderRef.current.requestData(); } catch { /* unsupported on older WebViews */ }
     mediaRecorderRef.current.stop();
     setIsRecording(false);
     setRecordingSeconds(0);

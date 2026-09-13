@@ -24,6 +24,7 @@ import { usePosts } from "@/context/PostContext";
 import { useMusic } from "@/context/MusicContext";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { CREDIT_PRICES } from "@/lib/credit-pricing";
 
 interface BoostPortalProps {
   children: React.ReactNode;
@@ -31,7 +32,7 @@ interface BoostPortalProps {
   type: 'POST' | 'SONIC';
 }
 
-const CREDIT_RATE = 2;
+const CREDIT_RATE = CREDIT_PRICES.postBoostPerDay;
 
 const DAY_TIERS = [
   { days: 1, label: '1 Day', sublabel: 'Pulse' },

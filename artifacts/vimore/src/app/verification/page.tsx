@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import ProfileLoading from "../profile/loading";
+import { CREDIT_PRICES } from "@/lib/credit-pricing";
 
 export default function VerificationHub() {
   const { currentUser, verifyUser, triggerHaptic, isLoading } = usePosts();
@@ -38,13 +39,13 @@ export default function VerificationHub() {
 
   const isPlayerActive = currentTrack && !isExpanded;
 
-  // Returning verified creators get a loyalty discount on renewal
+  // Keep the credit price fixed for every verification purchase.
   const isRenewal = !!(currentUser && currentUser.hasEverBeenVerified && !currentUser.isVerified);
 
   const pricing = useMemo(() => {
     return isRenewal
-      ? { diamond: 6, star: 20000 }
-      : { diamond: 8, star: 25000 };
+      ? { diamond: CREDIT_PRICES.verification, star: 20000 }
+      : { diamond: CREDIT_PRICES.verification, star: 25000 };
   }, [isRenewal]);
 
   const currentCost = currencyChoice === 'DIAMOND' ? pricing.diamond : pricing.star;
@@ -164,7 +165,7 @@ export default function VerificationHub() {
             <div>
               <p className="text-xs font-black text-green-600 dark:text-green-400 mb-0.5">Loyalty Discount Applied</p>
               <p className="text-[10px] text-muted-foreground leading-relaxed">
-                Welcome back! As a returning creator your renewal is discounted — <strong className="text-foreground">6 Credits</strong> or <strong className="text-foreground">20,000 Stars</strong> instead of the usual price.
+                Welcome back! Renew your verification badge for <strong className="text-foreground">{pricing.diamond} Credits</strong> or <strong className="text-foreground">20,000 Stars</strong>.
               </p>
             </div>
           </div>

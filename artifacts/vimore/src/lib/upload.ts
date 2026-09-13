@@ -1,6 +1,17 @@
 /** Browser-only Appwrite Storage upload helpers. */
 
 import { ID, storage } from './appwrite';
+import { authFetch } from './auth-fetch';
+
+function normalizeUploadFile(file: File, fallbackName: string): File {
+  // Capacitor/WebView can return a File-like object from a different realm,
+  // making `instanceof File` unreliable. Re-wrap it in the current realm.
+  if (typeof File !== 'undefined' && file instanceof File) return file;
+  if (typeof Blob !== 'undefined' && file instanceof Blob) {
+    return new File([file], fallbackName, { type: file.type || 'application/octet-stream' });
+  }
+  throw new Error('A browser File is required for upload');
+}
 
 /**
  * Upload a file directly from the browser through the Appwrite Web SDK.
@@ -18,10 +29,8 @@ export async function uploadViaClient(
   bucketId: string,
   fileId?: string,
 ): Promise<string> {
-  if (!(file instanceof File)) {
-    throw new Error('A browser File is required for upload');
-  }
-  const uploaded = await storage.createFile(bucketId, fileId || ID.unique(), file);
+  const normalizedFile = normalizeUploadFile(file, 'upload.bin');
+  const uploaded = await storage.createFile(bucketId, fileId || ID.unique(), normalizedFile);
   return uploaded.$id;
 }
 
@@ -50,14 +59,35 @@ export async function uploadLargeViaClient(
   options: ClientUploadOptions = {},
 ): Promise<string> {
   if (options.signal?.aborted) throw new Error('Upload cancelled');
+  const normalizedFile = normalizeUploadFile(file, 'upload.bin');
   const timeoutMs = options.timeoutMs ?? 180_000;
   let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_, reject) => {
     timeoutHandle = setTimeout(() => reject(new Error('Upload timed out. Please check your connection and try again.')), timeoutMs);
   });
-  const upload = storage.createFile(bucketId, fileId || ID.unique(), file);
+  const upload = storage.createFile(bucketId, fileId || ID.unique(), normalizedFile);
   const uploaded = await Promise.race([upload, timeout]);
   if (timeoutHandle) clearTimeout(timeoutHandle);
   options.onProgress?.(1);
   return uploaded.$id;
+}
+
+/**
+ * Upload voice recordings through the same-origin server route. This avoids
+ * Appwrite CORS and cross-realm File issues in Capacitor Android WebViews.
+ */
+export async function uploadVoiceViaServer(file: File): Promise<string> {
+  const normalizedFile = normalizeUploadFile(file, 'voice.webm');
+  const formData = new FormData();
+  formData.append('file', normalizedFile, normalizedFile.name || 'voice.webm');
+
+  const response = await authFetch('/api/upload/voice', {
+    method: 'POST',
+    body: formData,
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.fileId) {
+    throw new Error(data?.error || 'Could not save the voice message.');
+  }
+  return data.fileId;
 }

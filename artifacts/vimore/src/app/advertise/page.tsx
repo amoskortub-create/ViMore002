@@ -20,8 +20,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { format, addDays } from "date-fns";
 import { authFetch } from "@/lib/auth-fetch";
+import { CREDIT_PRICES } from "@/lib/credit-pricing";
 
-const CREDITS_PER_DAY = 3;
+const CREDITS_PER_DAY = CREDIT_PRICES.adPerDay;
 const MIN_DAYS = 5;
 const MAX_VIDEO_SECONDS = 45;
 
@@ -300,7 +301,7 @@ export default function AdvertisePage() {
           </Link>
           <div className="flex-1 min-w-0">
             <h1 className="font-black italic uppercase tracking-tighter text-base leading-none truncate">Advertise Your Business</h1>
-            <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest mt-0.5">Self-Service · 3 Credits / day · Min 5 days</p>
+            <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest mt-0.5">Self-Service · {CREDITS_PER_DAY} Credits / day · Min 5 days</p>
           </div>
           <div className="flex items-center gap-1.5 shrink-0 bg-secondary/40 px-3 py-1.5 rounded-xl">
             <Gem className="h-3.5 w-3.5 text-cyan-500" />

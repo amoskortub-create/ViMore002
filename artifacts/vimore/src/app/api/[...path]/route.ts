@@ -41,6 +41,7 @@ import * as TransactionSubscribe from '@/server/api-impl/root/transaction/subscr
 import * as TransactionUnlockPost from '@/server/api-impl/root/transaction/unlock-post';
 import * as TransactionVerify from '@/server/api-impl/root/transaction/verify';
 import * as UploadReel from '@/server/api-impl/root/upload-reel';
+import * as UploadVoice from '@/server/api-impl/root/upload-voice';
 import * as UserActivity from '@/server/api-impl/root/user/activity';
 import * as UserProfile from '@/server/api-impl/root/user/profile';
 import * as Withdraw from '@/server/api-impl/root/withdraw';
@@ -100,6 +101,7 @@ const ROUTES: Record<string, Handler> = {
   'transaction/unlock-post': TransactionUnlockPost,
   'transaction/verify': TransactionVerify,
   'upload/reel': UploadReel,
+  'upload/voice': UploadVoice,
   'user/activity': UserActivity,
   'user/profile': UserProfile,
   'withdraw': Withdraw,

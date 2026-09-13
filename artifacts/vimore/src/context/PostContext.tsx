@@ -14,6 +14,7 @@ import { formatErrorDescription, logAppwriteError } from '@/lib/appwrite-error';
 import { authFetch } from '@/lib/auth-fetch';
 import { offlineCache } from '@/lib/offline-cache';
 import { firePush } from '@/lib/push-fire';
+import { CREDIT_PRICES } from '@/lib/credit-pricing';
 
 export interface AppSettings {
   theme: 'light' | 'dark' | 'system';
@@ -3901,7 +3902,7 @@ export function PostProvider({ children }: { children: ReactNode }) {
   const boostNode = async (nodeId: string, duration: number, _currency: 'CREDIT', type: 'POST' | 'SONIC') => {
     if (!currentUser) return;
 
-    const ratePerDay = 2;
+    const ratePerDay = CREDIT_PRICES.postBoostPerDay;
     const totalCost = duration * ratePerDay;
     const currentBalance = currentUser.creditBalance ?? currentUser.diamondBalance ?? 0;
 
@@ -4185,7 +4186,7 @@ export function PostProvider({ children }: { children: ReactNode }) {
         const userDoc = await databases.getDocument(DATABASE_ID, COL.USERS, currentUser.$id);
         const balance = userDoc.credit_balance ?? userDoc.diamond_balance ?? 0;
         const expiry = userDoc.verification_expiry ? new Date(userDoc.verification_expiry).getTime() : undefined;
-        const COST = 8;
+        const COST = CREDIT_PRICES.verification;
         if (userDoc.is_verified && expiry && expiry > Date.now()) {
           return { status: 'already_verified' as const, expiry };
         }

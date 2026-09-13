@@ -3,6 +3,7 @@ import { getAdminDatabases, DATABASE_ID } from '@/lib/appwrite-server';
 import { getSessionUser } from '@/lib/session';
 import { rateLimit } from '@/lib/rate-limit';
 import { ID } from 'node-appwrite';
+import { CREDIT_PRICES } from '@/lib/credit-pricing';
 
 export const maxDuration = 30;
 
@@ -12,9 +13,9 @@ const COL = {
   VERIFICATION_RECORDS: 'verification_records',
 };
 
-const MIN_VERIFY_COST: Record<string, number> = {
-  DIAMOND: 1,
-  STAR: 1,
+const VERIFY_PRICES: Record<string, number> = {
+  DIAMOND: CREDIT_PRICES.verification,
+  STAR: 25000,
 };
 
 export async function POST(req: NextRequest) {
@@ -30,9 +31,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'You must be logged in.' }, { status: 401 });
     }
 
-    const { currency, cost } = await req.json();
-    if (!currency || !cost) {
-      return NextResponse.json({ error: 'currency and cost are required.' }, { status: 400 });
+    const { currency } = await req.json();
+    if (!currency) {
+      return NextResponse.json({ error: 'currency is required.' }, { status: 400 });
     }
 
     const normalizedCurrency = String(currency).toUpperCase();
@@ -40,12 +41,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'currency must be CREDIT or STAR.' }, { status: 400 });
     }
 
-    const rawCost = Number(cost);
-    const parsedCost = Math.round(rawCost);
-    const minCost = MIN_VERIFY_COST[normalizedCurrency] ?? 1;
-    if (!Number.isFinite(rawCost) || parsedCost < minCost) {
+    const parsedCost = VERIFY_PRICES[normalizedCurrency];
+    if (!parsedCost) {
       return NextResponse.json(
-        { error: `Verification requires at least ${minCost} ${normalizedCurrency}.` },
+        { error: 'Unsupported verification currency.' },
         { status: 400 }
       );
     }
@@ -80,6 +79,9 @@ export async function POST(req: NextRequest) {
 
     await db.updateDocument(DATABASE_ID, COL.USERS, session.userId, {
       [balanceField]: newBalance,
+      ...(normalizedCurrency === 'DIAMOND'
+        ? { credit_balance: newBalance, diamond_balance: newBalance }
+        : {}),
       is_verified: true,
       has_ever_been_verified: true,
       verification_expiry: verificationExpiry,
@@ -117,6 +119,9 @@ export async function POST(req: NextRequest) {
       try {
         await db.updateDocument(DATABASE_ID, COL.USERS, session.userId, {
           [balanceField]: currentBalance,
+          ...(normalizedCurrency === 'DIAMOND'
+            ? { credit_balance: currentBalance, diamond_balance: currentBalance }
+            : {}),
           is_verified: userDoc.is_verified ?? false,
           has_ever_been_verified: userDoc.has_ever_been_verified ?? false,
           verification_expiry: userDoc.verification_expiry ?? null,

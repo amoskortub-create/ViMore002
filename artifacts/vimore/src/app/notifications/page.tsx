@@ -90,6 +90,7 @@ export default function NotificationsPage() {
   const handleAction = (e: React.MouseEvent, node: NotificationNode) => {
     e.stopPropagation();
     triggerHaptic(25);
+    markAsRead(node.id);
     if (node.type === "SOCIAL" && node.targetUsername) { router.push(`/profile/${node.targetUsername}`); }
     else if (node.trackId) {
       const track = globalSongs.find((s) => String(s.id) === String(node.trackId));
