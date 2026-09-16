@@ -16,6 +16,14 @@ import { offlineCache } from '@/lib/offline-cache';
 import { firePush } from '@/lib/push-fire';
 import { CREDIT_PRICES } from '@/lib/credit-pricing';
 
+const PRESENCE_TTL_MS = 90_000;
+
+function hasFreshPresence(isOnline: unknown, lastSeenAt: unknown): boolean {
+  if (!isOnline || typeof lastSeenAt !== 'string') return false;
+  const lastSeenMs = Date.parse(lastSeenAt);
+  return Number.isFinite(lastSeenMs) && Date.now() - lastSeenMs <= PRESENCE_TTL_MS;
+}
+
 export interface AppSettings {
   theme: 'light' | 'dark' | 'system';
   hapticIntensity: number;
@@ -195,6 +203,7 @@ export interface ChatMessage {
   time: string;
   status: "sent" | "delivered" | "read";
   type: "text" | "photo" | "video" | "link" | "voice" | "tag" | "workspace" | "post";
+  mediaId?: string;
   mediaUrl?: string;
   voiceDuration?: string;
   isViewOnce?: boolean;
@@ -985,7 +994,7 @@ export function PostProvider({ children }: { children: ReactNode }) {
         cover: u.cover_id ? getFileUrl(BUCKET.COVERS, u.cover_id) : undefined,
         isVerified: u.is_verified || false,
         isGroup: false as const,
-        isOnline: u.is_online || false,
+        isOnline: hasFreshPresence(u.is_online, u.last_seen_at),
         lastSeenAt: u.last_seen_at || null,
         followsYou: false,
       }));
@@ -1027,9 +1036,10 @@ export function PostProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateConnectionPresence = useCallback((userId: string, isOnline: boolean, lastSeenAt: string | null) => {
+    const fresh = hasFreshPresence(isOnline, lastSeenAt);
     setConnectionsState(prev => prev.map(c =>
       c.$id === userId
-        ? { ...c, isOnline, lastSeenAt: lastSeenAt ?? c.lastSeenAt }
+        ? { ...c, isOnline: fresh, lastSeenAt: lastSeenAt ?? c.lastSeenAt }
         : c
     ));
   }, []);
@@ -1041,6 +1051,34 @@ export function PostProvider({ children }: { children: ReactNode }) {
       else next.delete(userId);
       return next;
     });
+  }, []);
+
+  // Realtime is an acceleration path, not the source of truth. Expire stale
+  // online indicators even when a mobile WebView pauses the websocket.
+  useEffect(() => {
+    const expireStalePresence = () => {
+      const staleIds = new Set<string>();
+      setConnectionsState(prev => {
+        let changed = false;
+        const next = prev.map(connection => {
+          if (!connection.isOnline || hasFreshPresence(true, connection.lastSeenAt)) return connection;
+          changed = true;
+          staleIds.add(connection.$id);
+          return { ...connection, isOnline: false };
+        });
+        return changed ? next : prev;
+      });
+      if (staleIds.size > 0) {
+        setOnlineUserIds(prev => {
+          const next = new Set(prev);
+          staleIds.forEach(id => next.delete(id));
+          return next;
+        });
+      }
+    };
+
+    const interval = setInterval(expireStalePresence, 30_000);
+    return () => clearInterval(interval);
   }, []);
 
   const loadStories = useCallback(async () => {
@@ -1277,6 +1315,13 @@ export function PostProvider({ children }: { children: ReactNode }) {
       }
 
       const msgs: ChatMessage[] = all.map(doc => {
+        const isVoice = doc.type === 'voice';
+        // Older voice records stored the bare Appwrite file ID in media_url.
+        // Treat that value as an ID so those messages become playable too.
+        const legacyMediaId = isVoice && doc.media_url && !doc.media_url.includes('/')
+          ? doc.media_url
+          : undefined;
+        const mediaId = doc.media_id || legacyMediaId;
         return {
           $id: doc.$id,
           sender: doc.sender_id === userId ? 'me' : 'them',
@@ -1285,8 +1330,9 @@ export function PostProvider({ children }: { children: ReactNode }) {
           time: formatTimeAgo(doc.$createdAt),
           status: doc.is_read ? 'read' : 'delivered',
           type: (doc.type || 'text') as ChatMessage['type'],
-          mediaUrl: doc.type === 'voice'
-            ? (doc.media_id ? getFileUrl(BUCKET.VOICE_MESSAGES, doc.media_id) : (doc.media_url ? toProxyUrl(doc.media_url) : undefined))
+          mediaId: mediaId || undefined,
+          mediaUrl: isVoice
+            ? (mediaId ? getFileUrl(BUCKET.VOICE_MESSAGES, mediaId) : (doc.media_url ? toProxyUrl(doc.media_url) : undefined))
             : (doc.media_id ? getFileUrl(BUCKET.MESSAGE_MEDIA, doc.media_id) : (doc.media_url ? toProxyUrl(doc.media_url) : undefined)),
           voiceDuration: doc.voice_duration || undefined,
           isViewOnce: doc.is_view_once || false,
@@ -1656,10 +1702,13 @@ export function PostProvider({ children }: { children: ReactNode }) {
 
     const markOnline = async () => {
       try {
-        await databases.updateDocument(DATABASE_ID, COL.USERS, userId, {
-          is_online: true,
-          last_seen_at: new Date().toISOString(),
+        const response = await authFetch('/api/presence', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          cache: 'no-store',
+          body: JSON.stringify({ userId, isOnline: true }),
         });
+        if (!response.ok) throw new Error(`Presence update failed (${response.status})`);
       } catch (err: any) {
         console.warn('[presence] markOnline failed:', err?.message ?? err);
       }
@@ -1667,10 +1716,13 @@ export function PostProvider({ children }: { children: ReactNode }) {
 
     const markOffline = async () => {
       try {
-        await databases.updateDocument(DATABASE_ID, COL.USERS, userId, {
-          is_online: false,
-          last_seen_at: new Date().toISOString(),
+        const response = await authFetch('/api/presence', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          cache: 'no-store',
+          body: JSON.stringify({ userId, isOnline: false }),
         });
+        if (!response.ok) throw new Error(`Presence update failed (${response.status})`);
       } catch (err: any) {
         console.warn('[presence] markOffline failed:', err?.message ?? err);
       }
@@ -2981,10 +3033,10 @@ export function PostProvider({ children }: { children: ReactNode }) {
       }
       if (message.text) docData.text = message.text;
       if (currentUser.avatar) docData.sender_avatar = currentUser.avatar;
-      if (message.mediaUrl) {
-        const fid = extractFileId(message.mediaUrl);
+      if (message.mediaUrl || message.mediaId) {
+        const fid = message.mediaId || (message.mediaUrl ? extractFileId(message.mediaUrl) : null);
         if (fid) docData.media_id = fid;
-        docData.media_url = message.mediaUrl;
+        if (message.mediaUrl) docData.media_url = message.mediaUrl;
       }
       if (message.voiceDuration) docData.voice_duration = message.voiceDuration;
       if (message.postId) docData.post_id = message.postId;

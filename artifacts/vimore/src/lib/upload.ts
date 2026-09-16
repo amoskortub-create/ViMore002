@@ -1,6 +1,6 @@
 /** Browser-only Appwrite Storage upload helpers. */
 
-import { ID, storage } from './appwrite';
+import { ID, storage, BUCKET, getFileUrl } from './appwrite';
 import { authFetch } from './auth-fetch';
 
 function normalizeUploadFile(file: File, fallbackName: string): File {
@@ -76,7 +76,7 @@ export async function uploadLargeViaClient(
  * Upload voice recordings through the same-origin server route. This avoids
  * Appwrite CORS and cross-realm File issues in Capacitor Android WebViews.
  */
-export async function uploadVoiceViaServer(file: File): Promise<string> {
+export async function uploadVoiceViaServer(file: File): Promise<{ fileId: string; mediaUrl: string }> {
   const normalizedFile = normalizeUploadFile(file, 'voice.webm');
   const formData = new FormData();
   formData.append('file', normalizedFile, normalizedFile.name || 'voice.webm');
@@ -89,5 +89,8 @@ export async function uploadVoiceViaServer(file: File): Promise<string> {
   if (!response.ok || !data.fileId) {
     throw new Error(data?.error || 'Could not save the voice message.');
   }
-  return data.fileId;
+  return {
+    fileId: data.fileId,
+    mediaUrl: data.mediaUrl || getFileUrl(BUCKET.VOICE_MESSAGES, data.fileId),
+  };
 }

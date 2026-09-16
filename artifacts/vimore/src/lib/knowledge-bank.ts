@@ -7,6 +7,7 @@ const COLLECTION = 'ai_knowledge_bank';
 const SIMILARITY_THRESHOLD = 0.50;
 const MAX_FETCH = 100;
 const MIN_ANSWER_LENGTH = 80;
+const LEGACY_ECONOMY_TERMS = /\b(?:diamonds?|gold|stars?|GD)\b/i;
 
 const STOP_WORDS = new Set([
   'a','an','the','is','are','was','were','be','been','being','have','has','had',
@@ -52,11 +53,11 @@ export function extractKeywords(text: string): string[] {
 
 export function detectCategory(text: string): string {
   const t = text.toLowerCase();
-  if (/diamond|gold|star\b|withdraw|earn|currency|payment|cash|wallet|balance|tip|gift|reward|transaction|fee/.test(t)) return 'economy';
+  if (/credit|ld\b|liberian dollar|withdraw|earn|currency|payment|cash|wallet|balance|tip|gift|reward|transaction|fee|subscription|verification|boost/.test(t)) return 'economy';
   if (/handshake|follow|friend|\bdm\b|direct message|chat|cluster|group|community|vibe stream/.test(t)) return 'social';
   if (/lock|unlock|node|post|reel|vibe|stream|content|video|photo|caption|media|creator/.test(t)) return 'content';
   if (/marketplace|sell|buy|listing|boost|product|item|shop|vendor/.test(t)) return 'marketplace';
-  if (/referral|star network|invite|link|refer|signup|refer/.test(t)) return 'referral';
+  if (/referral|invite|link|refer|signup/.test(t)) return 'referral';
   if (/account|login|password|register|profile|verify|sign|username|email|biometric|security/.test(t)) return 'account';
   if (/moderate|report|ban|violat|policy|rule|safe|content shield|suspend/.test(t)) return 'moderation';
   if (/ticket|event|concert|show|venue/.test(t)) return 'events';
@@ -134,6 +135,10 @@ export async function searchKnowledgeBank(question: string): Promise<{ answer: s
       else if ((doc.usage_count || 0) > 3) score *= 1.07;
       score *= (0.6 + (doc.quality_score || 0.5) * 0.4);
 
+      if (LEGACY_ECONOMY_TERMS.test(String(doc.question || '')) || LEGACY_ECONOMY_TERMS.test(String(doc.answer || ''))) {
+        continue;
+      }
+
       if (score > bestScore) {
         bestScore = score;
         bestDoc = doc;
@@ -172,6 +177,7 @@ export async function saveToKnowledgeBank(question: string, answer: string): Pro
   if (!process.env.APPWRITE_API_KEY) return;
   if (!question?.trim() || question.trim().length < 8) return;
   if (!answer || answer.length < MIN_ANSWER_LENGTH) return;
+  if (LEGACY_ECONOMY_TERMS.test(question) || LEGACY_ECONOMY_TERMS.test(answer)) return;
 
   try {
     const questionKw = extractKeywords(question);
@@ -179,7 +185,7 @@ export async function saveToKnowledgeBank(question: string, answer: string): Pro
     const combined = [...new Set([...questionKw, ...answerKw])].slice(0, 30);
 
     const category = detectCategory(question + ' ' + answer);
-    const isViMore = /vimore|diamond|gold|\bstar\b|handshake|cluster|signal|locked node|earnings hub|currency hub|command core|star network|media tech liberia/i.test(question + ' ' + answer);
+    const isViMore = /vimore|credit hub|liberian dollar|LD\b|handshake|cluster|signal|locked content|earnings portal|command core|media tech liberia|verification badge|boost post/i.test(question + ' ' + answer);
 
     const qualityScore = Math.min(1,
       (Math.log10(Math.max(answer.length, 10)) / Math.log10(10000)) * 0.55 +

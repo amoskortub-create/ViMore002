@@ -31,7 +31,11 @@ export async function POST(req: NextRequest) {
     });
     const uploaded = await getAdminStorage().createFile(VOICE_BUCKET, ID.unique(), uploadFile);
 
-    return NextResponse.json({ ok: true, fileId: uploaded.$id });
+    return NextResponse.json({
+      ok: true,
+      fileId: uploaded.$id,
+      mediaUrl: `/api/file/${VOICE_BUCKET}/${encodeURIComponent(uploaded.$id)}`,
+    });
   } catch (err: any) {
     return NextResponse.json(
       { error: err?.message || 'Voice upload failed.' },

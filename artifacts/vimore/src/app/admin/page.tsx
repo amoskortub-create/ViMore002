@@ -771,7 +771,7 @@ export default function AdminDashboard() {
     const load = async () => {
       setActiveUsersLoading(true);
       try {
-        const res = await authFetch('/api/admin/active-users');
+        const res = await authFetch(`/api/admin/active-users?ts=${Date.now()}`, { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           setActiveUsersData(data);
@@ -781,6 +781,20 @@ export default function AdminDashboard() {
       }
     };
     load();
+
+    const interval = setInterval(load, 60_000);
+    const refreshOnForeground = () => {
+      if (document.visibilityState === 'visible') load();
+    };
+    document.addEventListener('visibilitychange', refreshOnForeground);
+    window.addEventListener('pageshow', refreshOnForeground);
+    window.addEventListener('focus', refreshOnForeground);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', refreshOnForeground);
+      window.removeEventListener('pageshow', refreshOnForeground);
+      window.removeEventListener('focus', refreshOnForeground);
+    };
   }, [activeTab, isSuper]);
 
   // Load pending verifications when on verifications tab
@@ -3303,7 +3317,7 @@ export default function AdminDashboard() {
                   onClick={async () => {
                     setActiveUsersLoading(true);
                     try {
-                      const res = await authFetch('/api/admin/active-users');
+                       const res = await authFetch(`/api/admin/active-users?ts=${Date.now()}`, { cache: 'no-store' });
                       if (res.ok) setActiveUsersData(await res.json());
                     } catch { /* ignore */ } finally { setActiveUsersLoading(false); }
                   }}

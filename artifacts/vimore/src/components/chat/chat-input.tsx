@@ -166,10 +166,10 @@ export function ChatInput({ onSend, onTyping, onStopTyping }: ChatInputProps) {
       setMicPermission('granted');
 
       const supportedMimeTypes = [
+        'audio/mp4',
         'audio/webm;codecs=opus',
         'audio/webm',
         'audio/ogg;codecs=opus',
-        'audio/mp4',
       ];
       const mimeType = supportedMimeTypes.find((candidate) => MediaRecorder.isTypeSupported(candidate)) || '';
 

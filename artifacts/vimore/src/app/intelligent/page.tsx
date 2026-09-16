@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { usePosts } from "@/context/PostContext";
 import { databases, DATABASE_ID, COL } from "@/lib/appwrite";
+import { authFetch } from "@/lib/auth-fetch";
 import { ID, Query } from "appwrite";
 import { LiteLink as Link } from "@/components/ui/lite-link";
 import { Button } from "@/components/ui/button";
@@ -33,12 +34,13 @@ interface AiConversation {
 }
 
 const QUICK_CHIPS = [
-  "How do I earn Diamonds? 💎",
-  "Give me Marketplace tips 🛍️",
-  "What is a Handshake? 🤝",
+  "How do I earn money on ViMore? 💵",
+  "How does the Credit Hub work? 💳",
+  "How do I get verified or boost posts? 🚀",
 ];
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+const LEGACY_ECONOMY_TERMS = /\b(?:diamonds?|gold|stars?|GD)\b/i;
 
 export default function IntelligentPage() {
   const { currentUser } = usePosts();
@@ -83,7 +85,11 @@ export default function IntelligentPage() {
         Query.orderDesc("updated_at"),
         Query.limit(30),
       ]);
-      setConversations(res.documents as any);
+      setConversations(
+        (res.documents as any[]).filter((conversation) =>
+          !LEGACY_ECONOMY_TERMS.test(`${conversation.title || ''} ${conversation.last_message || ''}`)
+        )
+      );
     } catch {
       setConversations([]);
     } finally {
@@ -100,9 +106,25 @@ export default function IntelligentPage() {
         Query.orderAsc("created_at"),
         Query.limit(100),
       ]);
-      setMessages(
-        res.documents.map((d: any) => ({ role: d.role, content: d.content }))
+      const hasLegacyEconomyHistory = res.documents.some((d: any) =>
+        LEGACY_ECONOMY_TERMS.test(String(d.content || ''))
       );
+      if (hasLegacyEconomyHistory) {
+        // Retire the old conversation instead of showing or resending stale
+        // economy guidance. The next message starts a clean conversation.
+        setMessages([]);
+        setActiveConvId(null);
+        setConversations((prev) => prev.filter((c) => c.$id !== convId));
+        await authFetch("/api/intelligent/delete", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ conversationId: convId }),
+        }).catch(() => {});
+      } else {
+        setMessages(
+          res.documents.map((d: any) => ({ role: d.role, content: d.content }))
+        );
+      }
     } catch {
       setMessages([]);
     } finally {
@@ -131,10 +153,10 @@ export default function IntelligentPage() {
       setMessages([]);
     }
     try {
-      await fetch('/api/intelligent/delete', {
+      await authFetch('/api/intelligent/delete', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversationId: convId, userId: currentUser.$id }),
+        body: JSON.stringify({ conversationId: convId }),
       });
     } catch { /* silent — local state already updated */ }
   }
@@ -156,7 +178,7 @@ export default function IntelligentPage() {
 
     try {
       abortRef.current = new AbortController();
-      const res = await fetch("/api/intelligent", {
+      const res = await authFetch("/api/intelligent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

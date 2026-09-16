@@ -16,7 +16,8 @@ export async function GET(req: NextRequest) {
     const today = new Date().toISOString().slice(0, 10);
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-    // Paginate through all docs (up to 5000)
+    // Paginate through all activity docs so DAU/MAU does not silently
+    // undercount once the collection grows past the first 5,000 records.
     let allDocs: any[] = [];
     let cursor: string | undefined;
     do {
@@ -25,7 +26,6 @@ export async function GET(req: NextRequest) {
       const page = await db.listDocuments(DATABASE_ID, COL_ID, queries);
       allDocs = allDocs.concat(page.documents);
       cursor = page.documents.length === 500 ? page.documents[page.documents.length - 1].$id : undefined;
-      if (allDocs.length >= 5000) break;
     } while (cursor);
 
     // DAU — unique users today

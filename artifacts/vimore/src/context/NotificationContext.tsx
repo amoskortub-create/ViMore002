@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, Rea
 import { usePosts } from '@/context/PostContext';
 import { databases, DATABASE_ID, COL, ID, Query } from '@/lib/appwrite';
 import { firePush } from '@/lib/push-fire';
+import { authFetch } from '@/lib/auth-fetch';
 
 export type SignalType = 'SOCIAL' | 'SONIC' | 'POST' | 'SYSTEM';
 export type PulseCategory = 'HOME' | 'FRIENDS' | 'MUSIC' | 'MESSAGES' | 'ADMIN';
@@ -206,7 +207,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const markAsRead = useCallback((id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
     if (id.startsWith('notif_')) pendingReads.current.add(id);
-    fetch('/api/notifications/mark-read', {
+    authFetch('/api/notifications/mark-read', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ notificationIds: [id] }),
@@ -218,7 +219,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
     unreadIds.filter(id => id.startsWith('notif_')).forEach(id => pendingReads.current.add(id));
     if (unreadIds.length > 0) {
-      fetch('/api/notifications/mark-read', {
+      authFetch('/api/notifications/mark-read', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notificationIds: unreadIds }),
@@ -226,22 +227,26 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
   }, [notifications]);
 
-  const purgeSignal = useCallback((id: string) => {
+  const purgeSignal = useCallback(async (id: string) => {
     // Remove from UI immediately
     setNotifications(prev => prev.filter(n => n.id !== id));
     // Guard the polling loop so it won't re-add this ID while the delete is in flight
     pendingDeletions.current.add(id);
     // Use server-side route so the delete succeeds regardless of collection permissions
-    fetch('/api/notifications/delete', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ notificationId: id, userId: currentUser?.$id || '' }),
-    })
-      .catch(() => { /* UI already updated — silent */ })
-      .finally(() => {
-        pendingDeletions.current.delete(id);
+    try {
+      const response = await authFetch('/api/notifications/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notificationId: id }),
       });
-  }, [currentUser?.$id]);
+      if (!response.ok) throw new Error(`Notification delete failed (${response.status})`);
+      pendingDeletions.current.delete(id);
+    } catch (err) {
+      pendingDeletions.current.delete(id);
+      if (currentUser?.$id) await loadNotifications(currentUser.$id);
+      console.error('purgeSignal error:', err);
+    }
+  }, [currentUser?.$id, loadNotifications]);
 
   const clearPulse = useCallback((category: PulseCategory) => {
     setCategoryPulses(prev => ({ ...prev, [category]: 0 }));

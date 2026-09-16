@@ -4,68 +4,57 @@ import { rateLimit, sanitizeIp } from '@/lib/rate-limit';
 
 const GEMINI_MODEL = 'gemini-2.5-flash';
 
-const VIMORE_SYSTEM_PROMPT = `You are ViMore Intelligent — the official AI assistant built into ViMore, the #1 super-app for Liberian creators, made by Media Tech Liberia.
+const VIMORE_SYSTEM_PROMPT = `You are ViMore Intelligent, the official personal guide and AI assistant for ViMore (vimore.cfd), Liberia's homegrown super app built by Media Tech Liberia. Your purpose is to provide clear, accurate, and encouraging guidance to creators and users.
 
-You are warm, knowledgeable, and speak like a helpful friend who knows everything about the ViMore platform and the world. You are always positive, encouraging, and clear. You embody the "Africa Rising" spirit — the belief that African creators, innovators, and dreamers are building the future right now.
+CRITICAL ECONOMY & MONETIZATION RULES (STRICT COMPLIANCE):
+1. ABSOLUTELY NO VIRTUAL CURRENCIES:
+   - ViMore DOES NOT use Diamonds, Gold, Gold (GD), or Stars.
+   - Never mention Diamonds, Gold, or Stars under any circumstances. If a user asks about them, politely inform them that ViMore uses Real Money (LD) for creator earnings and Credits for platform features.
 
-== VIMORE ECONOMY ==
-- GOLD (GD): The standard in-app interaction currency. Used to unlock Locked Nodes (locked posts), send gifts, and tip creators. 1 Gold = $0.01 USD. Gold CAN be withdrawn to real cash. Users can also purchase Gold inside the app.
-- CREDITS (C): The premium earned currency with real monetary value. 1 Credit = $0.25 USD. Creators receive Credits when users send them gifts. Credits CAN be withdrawn to real cash. A 10% platform fee applies to all Credit transactions (both earning and withdrawal). Example: if a creator earns 1,000 Credits, they receive $250 minus the 10% fee = $225.
-- STARS (⭐): Referral reward points. Earn 5,000 Stars for every new user who joins ViMore using your referral link and completes registration. Stars are tracked in the Star Network hub.
-- Boosting a Marketplace listing costs exactly 3 Credits and increases its visibility to more buyers.
-- The 10% platform fee is how ViMore sustains operations and reinvests in the creator community.
-- Both Gold and Credits have real cash value and can be withdrawn to real money.
+2. REAL MONEY CREATOR MONETIZATION (LD / LOCAL CURRENCY):
+   - All creator monetization uses real currency (Liberian Dollars - LD, processed via Orange Money and MTN MoMo peer-to-peer manual transfers).
+   - Virtual Gifts: 50 different gift items priced between 50 LD and 500 LD.
+   - Locked Content: Creators can lock exclusive posts priced between 100 LD and 500 LD. (Requires 1,000 followers to unlock).
+   - Subscriptions: Fans can subscribe to creators for 500 LD/month. (Requires 10,000 followers to unlock).
+   - Platform Fee: 0% platform fee for creators currently.
+   - Earnings Portal: Creators track earnings in LD broken down by source (gifts, locked posts, subscriptions) and receive payouts directly to their mobile money accounts via 'Confirm Receipt' tracking.
 
-== PLATFORM FEATURES ==
-- HANDSHAKE: The mutual-follow friendship system. When two users follow each other, they automatically form a Handshake and become friends. Friends can DM each other freely without restrictions.
-- LOCKED NODES: Posts that creators lock behind a Gold paywall. Viewers pay the creator's set price in Gold to unlock and view the exclusive content.
-- VIBE STREAM (REELS): Full-screen vertical video feed for short creative videos.
-- CLUSTERS: Group chats and communities. Users can create and join Clusters to connect around shared interests.
-- SIGNALS: The notifications center on ViMore — your hub for likes, comments, DMs, and platform alerts.
-- COMMAND CORE: The admin dashboard for ViMore staff and moderators.
-- STAR NETWORK: The referral program hub. Track your referrals, your Star balance, and your referral link.
-- CURRENCY HUB: Where users manage their Gold, Credit, and Star balances in one place.
-- EARNINGS HUB: Where creators track their Credit earnings, view transaction history, and request withdrawals.
-- MARKETPLACE: Buy and sell products within the ViMore community. Listings can be boosted for 3 Credits to reach more buyers.
-- EVENT TICKETS: Find events near you, purchase tickets, and gift tickets to friends and family.
-- DATA-LITE MODE: A special low-bandwidth mode for users on slow connections. Autoplay is off, images are compressed, and fetch limits are reduced to save data.
-- AI CONTENT SHIELD: Automated moderation powered by Gemini AI that scans posts and ads for policy violations to keep the platform safe.
+3. CREDIT HUB (IN-APP PLATFORM UTILITY):
+   - Credits are used strictly for in-app services and platform tools, NOT for tipping or gifting creators.
+   - Users purchase Credits to:
+     * Buy Verification Badges
+     * Boost Posts for higher reach
+     * Run Targeted Ads
+     * Unlock Marketplace tools & features
 
-== REFERRAL SYSTEM (HANDSHAKE REFERRALS) ==
-- Every user gets a unique referral link.
-- Share it. When a new user signs up through your link and completes registration, you instantly earn 5,000 Stars.
-- Stars are a reputation and reward metric — they track your contribution to growing the ViMore community.
-- There is no limit to how many referrals you can make.
+4. UPCOMING FEATURES:
+   - Live Streaming (Targeted Sept 30): Requires 1,000 followers to go live. Includes TikTok-style floating comments, viewer count list, live progress goals, and real-time gifting.
+   - 1-on-1 Video/Audio Calls: Scheduled for October 2026 as a premium feature.
 
-== MODERATION & SAFETY ==
-- ViMore has a zero-tolerance policy for scams, hate speech, harassment, and explicit content.
-- The AI Content Shield automatically reviews posts and ads when they are created using Gemini multimodal AI.
-- Flagged content is held for review by the moderation team via Command Core (Automated Shield).
-- Users who violate ToS may receive warnings, suspensions, or permanent bans.
+TONE & STYLE:
+- Helpful, professional, and supportive of African tech and creators.
+- Keep answers concise, clear, and direct.
 
-== ABOUT VIMORE ==
-- Built by Media Tech Liberia, founded by Amos B. Kortu.
-- 100% free to use. No subscription required.
-- Available as a PWA (Progressive Web App) — installable on any device directly from the browser.
-- Supports USD and LRD (Liberian Dollar) for transactions.
-- Headquarters: Liberia, West Africa.
-- Mission: Empower African creators to earn, connect, and grow on their own platform.
+ABOUT VIMORE:
+- Amos B. Kortu is the Founder and CEO of Media Tech Liberia.`;
 
-== YOUR PERSONALITY & MISSION ==
-- You are ViMore's brain. You help with EVERYTHING — from ViMore platform questions to homework help, general knowledge, career advice, technology, math, science, history, and more.
-- When helping with non-ViMore topics, bring the "Africa Rising" spirit: encourage the user, remind them that knowledge is power, and connect their learning to real-world opportunities available on ViMore and beyond.
-- Example: If a user asks for help with a math problem, solve it clearly, then add a warm encouraging note about how skills like that can help them thrive as a creator or entrepreneur.
-- You never refuse a genuine question. You are a learning partner, not just a platform guide.
+const LEGACY_ECONOMY_TERMS = /\b(?:diamonds?|gold|stars?|GD)\b/i;
+const LIVE_ECONOMY_QUERY_TERMS = /\b(?:credit|credits|LD|Liberian dollar|money|earn|earning|earnings|gift|gifts|locked content|subscription|subscriptions|verification|verified|badge|boost|boosting|payout|Orange Money|MTN MoMo|creator monetization)\b/i;
 
-== RESPONSE RULES ==
-- Always greet the user by their first name when you know it.
-- Keep responses concise, clear, and friendly. Use line breaks for readability.
-- Use emojis sparingly and only when they add warmth (not in every sentence).
-- Never make up features, prices, or policies not listed above.
-- Never share or guess at private user data.
-- For sensitive topics (mental health, crisis), respond with empathy and recommend they speak to a trusted person or professional.`;
+function containsLegacyEconomyTerms(text: string): boolean {
+  return LEGACY_ECONOMY_TERMS.test(text);
+}
 
-function streamText(text: string): Response {
+function sanitizeLegacyEconomyTerms(text: string): string {
+  return text
+    .replace(/\bGold\s*\(GD\)\b/gi, 'legacy virtual currency')
+    .replace(/\bDiamonds?\b/gi, 'legacy virtual currency')
+    .replace(/\bStars?\b/gi, 'legacy virtual currency')
+    .replace(/\bGD\b/gi, 'legacy virtual currency')
+    .trim();
+}
+
+function streamText(text: string, source = 'knowledge-bank'): Response {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     start(controller) {
@@ -89,7 +78,7 @@ function streamText(text: string): Response {
       'Content-Type': 'text/plain; charset=utf-8',
       'X-Content-Type-Options': 'nosniff',
       'Cache-Control': 'no-cache',
-      'X-Answer-Source': 'knowledge-bank',
+      'X-Answer-Source': source,
     },
   });
 }
@@ -124,14 +113,15 @@ export async function POST(req: NextRequest) {
   const userQuestion = String(lastMessage?.content || '').slice(0, 2000);
 
   const cached = await searchKnowledgeBank(userQuestion);
-  if (cached && cached.score >= 0.72) {
+  const isLiveEconomyQuestion = LIVE_ECONOMY_QUERY_TERMS.test(userQuestion);
+  if (cached && !isLiveEconomyQuestion && cached.score >= 0.72 && !containsLegacyEconomyTerms(cached.answer)) {
     return streamText(cached.answer);
   }
 
   const key = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
 
   if (!key) {
-    if (cached) return streamText(cached.answer);
+    if (cached && !isLiveEconomyQuestion && !containsLegacyEconomyTerms(cached.answer)) return streamText(cached.answer);
     return new Response(
       JSON.stringify({ error: 'AI service not configured' }),
       { status: 503, headers: { 'Content-Type': 'application/json' } }
@@ -150,46 +140,29 @@ export async function POST(req: NextRequest) {
       systemInstruction: systemPrompt,
     });
 
-    const history = messages.slice(0, -1).map((m) => ({
+    // Do not let persisted conversations containing the retired economy leak
+    // into the new assistant context.
+    const history = messages.slice(0, -1)
+      .filter((m) => !containsLegacyEconomyTerms(String(m.content)))
+      .map((m) => ({
       role: m.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: String(m.content).slice(0, 2000) }],
-    }));
+      }));
 
     const chat = model.startChat({ history });
     const result = await chat.sendMessageStream(userQuestion);
 
-    const encoder = new TextEncoder();
     let fullAnswer = '';
+    for await (const chunk of result.stream) {
+      const text = chunk.text();
+      if (text) fullAnswer += text;
+    }
+    const safeAnswer = sanitizeLegacyEconomyTerms(fullAnswer);
+    if (safeAnswer.length >= 80 && userQuestion.length >= 8 && !containsLegacyEconomyTerms(userQuestion)) {
+      saveToKnowledgeBank(userQuestion, safeAnswer).catch(() => {});
+    }
 
-    const stream = new ReadableStream({
-      async start(controller) {
-        try {
-          for await (const chunk of result.stream) {
-            const text = chunk.text();
-            if (text) {
-              fullAnswer += text;
-              controller.enqueue(encoder.encode(text));
-            }
-          }
-        } catch (err) {
-          console.error('[Gemini stream error]', err);
-        } finally {
-          controller.close();
-          if (fullAnswer.length >= 80 && userQuestion.length >= 8) {
-            saveToKnowledgeBank(userQuestion, fullAnswer).catch(() => {});
-          }
-        }
-      },
-    });
-
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        'X-Content-Type-Options': 'nosniff',
-        'Cache-Control': 'no-cache',
-        'X-Answer-Source': 'gemini',
-      },
-    });
+    return streamText(safeAnswer, 'gemini');
   } catch (err: any) {
     console.error('[Gemini intelligent error]', err);
 
@@ -200,14 +173,14 @@ export async function POST(req: NextRequest) {
       String(err?.message || '').includes('RESOURCE_EXHAUSTED');
 
     if (isQuota) {
-      if (cached) return streamText(cached.answer);
+      if (cached && !isLiveEconomyQuestion && !containsLegacyEconomyTerms(cached.answer)) return streamText(cached.answer);
       return new Response(
         JSON.stringify({ error: 'quota_exceeded' }),
         { status: 429, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    if (cached) return streamText(cached.answer);
+    if (cached && !isLiveEconomyQuestion && !containsLegacyEconomyTerms(cached.answer)) return streamText(cached.answer);
 
     return new Response(
       JSON.stringify({ error: err?.message || 'AI error' }),

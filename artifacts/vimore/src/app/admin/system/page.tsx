@@ -246,12 +246,25 @@ export default function SystemPage() {
     );
     signupsUnsubRef.current = signupsUnsub;
 
+    const refreshOnForeground = () => {
+      if (document.visibilityState === 'visible') {
+        loadStats(true);
+        startAutoRefresh();
+      }
+    };
+    document.addEventListener('visibilitychange', refreshOnForeground);
+    window.addEventListener('pageshow', refreshOnForeground);
+    window.addEventListener('focus', refreshOnForeground);
+
     return () => {
       unsub();
       signupsUnsub();
       if (timerRef.current) clearTimeout(timerRef.current);
       if (autoRefreshRef.current) clearInterval(autoRefreshRef.current);
       if (countdownRef.current) clearInterval(countdownRef.current);
+      document.removeEventListener('visibilitychange', refreshOnForeground);
+      window.removeEventListener('pageshow', refreshOnForeground);
+      window.removeEventListener('focus', refreshOnForeground);
     };
   }, [isSuper, loadStats, scheduleRefresh, startAutoRefresh, loadRecentSignups]);
 

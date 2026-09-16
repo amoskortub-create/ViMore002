@@ -6,20 +6,35 @@ import { authFetch } from "@/lib/auth-fetch";
 
 export function ActivityTracker() {
   const { currentUser } = usePosts();
-  const tracked = useRef(false);
 
   useEffect(() => {
-    if (!currentUser?.$id || tracked.current) return;
-    tracked.current = true;
+    if (!currentUser?.$id) return;
 
-    authFetch("/api/user/activity", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        user_id: currentUser.$id,
-        username: currentUser.username || currentUser.name || "unknown",
-      }),
-    }).catch(() => {});
+    const track = () => {
+      authFetch("/api/user/activity", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({
+          user_id: currentUser.$id,
+          username: currentUser.username || currentUser.name || "unknown",
+        }),
+      }).catch(() => {});
+    };
+
+    track();
+    const interval = setInterval(track, 45_000);
+    const handleForeground = () => {
+      if (document.visibilityState === "visible") track();
+    };
+    document.addEventListener("visibilitychange", handleForeground);
+    window.addEventListener("pageshow", handleForeground);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleForeground);
+      window.removeEventListener("pageshow", handleForeground);
+    };
   }, [currentUser?.$id]);
 
   return null;

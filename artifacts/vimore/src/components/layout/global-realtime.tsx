@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
-import { client, DATABASE_ID, COL, formatTimeAgo } from '@/lib/appwrite';
+import { client, DATABASE_ID, COL, BUCKET, formatTimeAgo, getFileUrl, toProxyUrl } from '@/lib/appwrite';
 import { usePosts, PostComment } from '@/context/PostContext';
 import { useNotifications } from '@/context/NotificationContext';
 import { useAdminAlerts } from '@/context/AdminAlertsContext';
@@ -144,6 +144,18 @@ export function GlobalRealtimeListener() {
             const timeStr = payload.$createdAt ? formatTimeAgo(payload.$createdAt) : 'Just now';
 
             // Build the incoming message object
+            const legacyVoiceMediaId = payload.type === 'voice'
+              && payload.media_url
+              && !String(payload.media_url).includes('/')
+              ? String(payload.media_url)
+              : undefined;
+            const incomingMediaId = payload.media_id || legacyVoiceMediaId;
+            const incomingMediaUrl = incomingMediaId
+              ? getFileUrl(
+                payload.type === 'voice' ? BUCKET.VOICE_MESSAGES : BUCKET.MESSAGE_MEDIA,
+                incomingMediaId,
+              )
+              : (payload.media_url ? toProxyUrl(payload.media_url) : undefined);
             const incomingMsg = {
               $id: payload.$id || `msg_${Date.now()}`,
               sender: 'them' as const,
@@ -154,7 +166,8 @@ export function GlobalRealtimeListener() {
               time: timeStr,
               status: 'delivered' as const,
               type: (payload.type || 'text') as any,
-              mediaUrl: payload.media_url || undefined,
+              mediaId: incomingMediaId,
+              mediaUrl: incomingMediaUrl,
               voiceDuration: payload.voice_duration || undefined,
               replyToId: payload.reply_to_id || undefined,
               replyToText: payload.reply_to_text || undefined,
