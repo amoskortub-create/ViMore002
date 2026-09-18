@@ -32,11 +32,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
     }
 
-    const { receiverId, clusterId, text } = await req.json();
+    const {
+      receiverId,
+      clusterId,
+      text,
+      type = 'text',
+      mediaId,
+      mediaUrl,
+      voiceDuration,
+    } = await req.json();
 
-    if (!receiverId || !clusterId || !text || !String(text).trim()) {
+    const supportedTypes = new Set(['text', 'voice']);
+    const hasText = typeof text === 'string' && text.trim().length > 0;
+    const hasMedia = typeof mediaId === 'string' || typeof mediaUrl === 'string';
+    if (
+      !receiverId ||
+      !clusterId ||
+      !supportedTypes.has(type) ||
+      (!hasText && !(type === 'voice' && hasMedia))
+    ) {
       return NextResponse.json(
-        { error: 'receiverId, clusterId and text are required.' },
+        { error: 'receiverId, clusterId and message content are required.' },
         { status: 400 }
       );
     }
@@ -57,18 +73,23 @@ export async function POST(req: NextRequest) {
       senderAvatar = sender?.avatar || sender?.avatar_id || '';
     } catch { /* best-effort */ }
 
-    await db.createDocument(DATABASE_ID, MESSAGES_COLLECTION, ID.unique(), {
+    const messageData: Record<string, unknown> = {
       cluster_id: clusterId,
       sender_id: session.userId,      // from session, never from body
       sender_name: senderName,        // from DB, never from body
       sender_avatar: senderAvatar,
       receiver_id: receiverId,
-      type: 'text',
-      text: String(text).trim().slice(0, 5000),
+      type,
       is_read: false,
-    } as any);
+    };
+    if (hasText) messageData.text = String(text).trim().slice(0, 5000);
+    if (typeof mediaId === 'string' && mediaId) messageData.media_id = mediaId;
+    if (typeof mediaUrl === 'string' && mediaUrl) messageData.media_url = mediaUrl;
+    if (typeof voiceDuration === 'string' && voiceDuration) messageData.voice_duration = voiceDuration;
 
-    return NextResponse.json({ ok: true });
+    const created = await db.createDocument(DATABASE_ID, MESSAGES_COLLECTION, ID.unique(), messageData as any);
+
+    return NextResponse.json({ ok: true, messageId: created.$id, createdAt: created.$createdAt });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || 'Bad request' }, { status: 400 });
   }

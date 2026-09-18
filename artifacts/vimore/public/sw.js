@@ -1,14 +1,14 @@
 /**
  * ViMore Service Worker v12
  * - APP_SHELL_CACHE: permanent — Next.js static assets (JS/CSS/fonts)
- * - PAGE_CACHE: 5 h — full page HTML for offline navigation
+ * - PAGE_CACHE: 5 h — full page HTML fallback for offline navigation
  * - PINNED_CACHE: 24 h — audio/video intentionally played by the user
  * - MEDIA_CACHE: 5 h — all other images / media encountered while browsing
  * - Range-request synthesis: cached full videos are sliced to satisfy byte-range requests
  * - Push notifications and badge control unchanged
  */
 
-const SW_VERSION = 'v1789343659370';
+const SW_VERSION = 'v1789681178202';
 const APP_SHELL_CACHE = `vimore-shell-${SW_VERSION}`;
 const PAGE_CACHE      = `vimore-pages-${SW_VERSION}`;
 const MEDIA_CACHE     = `vimore-media-${SW_VERSION}`;
@@ -220,32 +220,24 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // ── 2. Page navigations: stale-while-revalidate with 5 h expiry ──────────
+  // ── 2. Page navigations: network-first with cached offline fallback ───────
+  // The Android shell loads the live web app. Returning cached HTML first can
+  // keep an old Next build active in the APK even after a successful deploy.
   if (isPageNavigation(request)) {
     event.respondWith(
       (async () => {
         const pageCache = await caches.open(PAGE_CACHE);
         const cached = await pageCache.match(request);
 
-        const networkFetch = fetch(request)
-          .then(response => {
-            if (response.ok) {
-              pageCache.put(request, stampResponse(response.clone()));
-            }
-            return response;
-          })
-          .catch(() => null);
-
-        if (cached && !isExpired(cached, MAX_PAGE_AGE_MS)) {
-          return cached;
-        }
-
         try {
-          const fresh = await networkFetch;
-          if (fresh) return fresh;
+          const fresh = await fetch(request);
+          if (fresh.ok) {
+            await pageCache.put(request, stampResponse(fresh.clone()));
+          }
+          return fresh;
         } catch {}
 
-        if (cached) return cached;
+        if (cached && !isExpired(cached, MAX_PAGE_AGE_MS)) return cached;
 
         const rootCached = await pageCache.match('/');
         if (rootCached) return rootCached;

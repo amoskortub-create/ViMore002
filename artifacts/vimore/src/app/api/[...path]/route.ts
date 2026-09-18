@@ -27,6 +27,7 @@ import * as Moderate from '@/server/api-impl/root/moderate';
 import * as MusicCatalog from '@/server/api-impl/root/music/catalog';
 import * as MusicStream from '@/server/api-impl/root/music/stream';
 import * as NotificationsDelete from '@/server/api-impl/root/notifications-delete';
+import * as NotificationsList from '@/server/api-impl/root/notifications-list';
 import * as NotificationsMarkRead from '@/server/api-impl/root/notifications-mark-read';
 import * as PaymentApprove from '@/server/api-impl/root/payment/approve';
 import * as PaymentReject from '@/server/api-impl/root/payment/reject';
@@ -87,6 +88,7 @@ const ROUTES: Record<string, Handler> = {
   'music/catalog': MusicCatalog,
   'music/stream': MusicStream,
   'notifications/delete': NotificationsDelete,
+  'notifications/list': NotificationsList,
   'notifications/mark-read': NotificationsMarkRead,
   'payment/approve': PaymentApprove,
   'payment/reject': PaymentReject,

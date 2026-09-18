@@ -23,7 +23,10 @@ public class MainActivity extends BridgeActivity {
 		super.onCreate(savedInstanceState);
 		createNotificationChannel();
 		if (getBridge() != null) {
-			getBridge().getWebView().getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+			// Always validate remote app assets with the network. The APK loads
+			// vimore.cfd, so LOAD_CACHE_ELSE_NETWORK can keep an old Next bundle
+			// (including old notification/message logic) after the web app updates.
+			getBridge().getWebView().getSettings().setCacheMode(WebSettings.LOAD_DEFAULT);
 			getBridge().getWebView().getSettings().setDomStorageEnabled(true);
 			getBridge().getWebView().setWebChromeClient(new ViMoreWebChromeClient(getBridge()));
 		}

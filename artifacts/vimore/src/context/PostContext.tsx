@@ -3045,7 +3045,30 @@ export function PostProvider({ children }: { children: ReactNode }) {
       if (message.replyToText) docData.reply_to_text = message.replyToText;
       if (message.replyToSenderName) docData.reply_to_sender_name = message.replyToSenderName;
       if (message.replyToType) docData.reply_to_type = message.replyToType;
-      await databases.createDocument(DATABASE_ID, isClusterMsg ? COL.GROUP_MESSAGES : COL.MESSAGES, ID.unique(), docData);
+      if (!isClusterMsg && message.type === 'voice') {
+        const recipientConn = connections.find(c => c.username === recipientId);
+        if (!recipientConn?.$id) {
+          throw new Error('This conversation is not ready to receive a voice message.');
+        }
+        const response = await authFetch('/api/messages/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            receiverId: recipientConn.$id,
+            clusterId,
+            type: 'voice',
+            mediaId: message.mediaId,
+            mediaUrl: message.mediaUrl,
+            voiceDuration: message.voiceDuration,
+          }),
+        });
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data?.error || 'Could not deliver your voice message.');
+        }
+      } else {
+        await databases.createDocument(DATABASE_ID, isClusterMsg ? COL.GROUP_MESSAGES : COL.MESSAGES, ID.unique(), docData);
+      }
 
       // Deliver a Web Push to the recipient(s) for the new chat message
       try {

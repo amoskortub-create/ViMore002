@@ -38,9 +38,9 @@ interface NotificationContextType {
   categoryPulses: Record<PulseCategory, number>;
   messagePreviews: Record<string, MessagePreview>;
   addSignal: (signal: Omit<NotificationNode, 'id' | 'time' | 'isRead'>) => void;
-  markAsRead: (id: string) => void;
-  markAllAsRead: () => void;
-  purgeSignal: (id: string) => void;
+  markAsRead: (id: string) => Promise<boolean>;
+  markAllAsRead: () => Promise<boolean>;
+  purgeSignal: (id: string) => Promise<void>;
   clearPulse: (category: PulseCategory) => void;
   incrementPulse: (category: PulseCategory) => void;
   setPulseCount: (category: PulseCategory, count: number) => void;
@@ -82,13 +82,15 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const loadNotifications = useCallback(async (userId: string) => {
     try {
-      const res = await databases.listDocuments(DATABASE_ID, COL.NOTIFICATIONS, [
-        Query.equal('user_id', userId),
-        Query.notEqual('type', 'CALL_INCOMING'),
-        Query.orderDesc('$createdAt'),
-        Query.limit(50),
-      ]);
-      const mapped: NotificationNode[] = res.documents
+      // Use the authenticated server path for reads as well as mutations.
+      // This avoids the Android WebView using a different Appwrite permission
+      // or session path from the one used by mark-read/delete.
+      const response = await authFetch('/api/notifications/list', {
+        cache: 'no-store',
+      });
+      if (!response.ok) throw new Error(`Notification load failed (${response.status})`);
+      const data = await response.json();
+      const mapped: NotificationNode[] = (Array.isArray(data?.documents) ? data.documents : [])
         .filter((doc: any) => !pendingDeletions.current.has(doc.$id))
         .map((doc: any) => ({
           id: doc.$id,
@@ -96,8 +98,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           title: doc.title || '',
           content: doc.content || doc.message || '',
           time: formatTimeAgoSimple(doc.$createdAt),
-          isRead: doc.is_read || false,
-          recipientId: doc.user_id || '',
+          isRead: doc.is_read === true || doc.is_read === 1 || doc.is_read === 'true',
+          recipientId: doc.user_id || doc.recipient_id || '',
           postId: doc.post_id || undefined,
           trackId: doc.track_id || undefined,
           targetUsername: doc.target_username || undefined,
@@ -204,26 +206,48 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
   }, [triggerSound, triggerHaptic, currentUser]);
 
-  const markAsRead = useCallback((id: string) => {
+  const markAsRead = useCallback(async (id: string): Promise<boolean> => {
+    const previous = notifications.find(n => n.id === id);
+    if (!previous || previous.isRead) return true;
+
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
     if (id.startsWith('notif_')) pendingReads.current.add(id);
-    authFetch('/api/notifications/mark-read', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ notificationIds: [id] }),
-    }).catch(() => { /* optimistic UI; retry on refresh if the server is unavailable */ });
-  }, []);
+    try {
+      const response = await authFetch('/api/notifications/mark-read', {
+        method: 'POST',
+        keepalive: true,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notificationIds: [id] }),
+      });
+      if (!response.ok) throw new Error(`Notification read update failed (${response.status})`);
+      return true;
+    } catch (err) {
+      pendingReads.current.delete(id);
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: previous.isRead } : n));
+      console.error('markAsRead error:', err);
+      return false;
+    }
+  }, [notifications]);
 
-  const markAllAsRead = useCallback(() => {
+  const markAllAsRead = useCallback(async (): Promise<boolean> => {
     const unreadIds = notifications.filter(n => !n.isRead).map(n => n.id);
+    if (unreadIds.length === 0) return true;
     setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
     unreadIds.filter(id => id.startsWith('notif_')).forEach(id => pendingReads.current.add(id));
-    if (unreadIds.length > 0) {
-      authFetch('/api/notifications/mark-read', {
+    try {
+      const response = await authFetch('/api/notifications/mark-read', {
         method: 'POST',
+        keepalive: true,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notificationIds: unreadIds }),
-      }).catch(() => { /* optimistic UI; retry on refresh if the server is unavailable */ });
+      });
+      if (!response.ok) throw new Error(`Notification read update failed (${response.status})`);
+      return true;
+    } catch (err) {
+      unreadIds.filter(id => id.startsWith('notif_')).forEach(id => pendingReads.current.delete(id));
+      setNotifications(prev => prev.map(n => unreadIds.includes(n.id) ? { ...n, isRead: false } : n));
+      console.error('markAllAsRead error:', err);
+      return false;
     }
   }, [notifications]);
 
@@ -236,6 +260,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     try {
       const response = await authFetch('/api/notifications/delete', {
         method: 'DELETE',
+        keepalive: true,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notificationId: id }),
       });
