@@ -42,7 +42,7 @@ export function MainNav() {
     { icon: Activity, label: t('nav_admin'), href: "/admin", category: "ADMIN" as PulseCategory, isHidden: !isAdmin },
     { icon: Megaphone, label: "Advertise", href: "/advertise" },
     { icon: Sparkles, label: "Coming Soon", href: "/coming-soon" },
-    { icon: Bot, label: "Intelligent", href: "/intelligent" },
+    { icon: Bot, label: "Mesurado Ai", href: "/intelligent" },
     { icon: Building2, label: "About Us", href: "/mtl" },
     { icon: Code2, label: "Developer", href: "/developer" },
     { icon: ShieldAlert, label: "Child Safety", href: "/child-safety" },

@@ -4,7 +4,11 @@ import { rateLimit, sanitizeIp } from '@/lib/rate-limit';
 
 const GEMINI_MODEL = 'gemini-2.5-flash';
 
-const VIMORE_SYSTEM_PROMPT = `You are ViMore Intelligent, the official personal guide and AI assistant for ViMore (vimore.cfd), Liberia's homegrown super app built by Media Tech Liberia. Your purpose is to provide clear, accurate, and encouraging guidance to creators and users.
+const VIMORE_SYSTEM_PROMPT = `You are Mesurado Ai, the official personal guide and AI assistant for ViMore (vimore.cfd), Liberia's homegrown super app built by Media Tech Liberia. Your purpose is to provide clear, accurate, and encouraging guidance to creators and users.
+
+BRAND NAME:
+- Always identify yourself as Mesurado Ai.
+- Never call yourself ViMore Intelligent or ViMore Agent.
 
 CRITICAL ECONOMY & MONETIZATION RULES (STRICT COMPLIANCE):
 1. ABSOLUTELY NO VIRTUAL CURRENCIES:
@@ -41,6 +45,12 @@ ABOUT VIMORE:
 const LEGACY_ECONOMY_TERMS = /\b(?:diamonds?|gold|stars?|GD)\b/i;
 const LIVE_ECONOMY_QUERY_TERMS = /\b(?:credit|credits|LD|Liberian dollar|money|earn|earning|earnings|gift|gifts|locked content|subscription|subscriptions|verification|verified|badge|boost|boosting|payout|Orange Money|MTN MoMo|creator monetization)\b/i;
 
+function sanitizeAssistantBranding(text: string): string {
+  return text
+    .replace(/\bViMore Intelligent\b/gi, 'Mesurado Ai')
+    .replace(/\bViMore Agent\b/gi, 'Mesurado Ai');
+}
+
 function containsLegacyEconomyTerms(text: string): boolean {
   return LEGACY_ECONOMY_TERMS.test(text);
 }
@@ -58,7 +68,7 @@ function streamText(text: string, source = 'knowledge-bank'): Response {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     start(controller) {
-      const words = text.split(' ');
+      const words = sanitizeAssistantBranding(text).split(' ');
       let i = 0;
       function push() {
         if (i >= words.length) {
@@ -162,7 +172,7 @@ export async function POST(req: NextRequest) {
       saveToKnowledgeBank(userQuestion, safeAnswer).catch(() => {});
     }
 
-    return streamText(safeAnswer, 'gemini');
+      return streamText(sanitizeAssistantBranding(safeAnswer), 'gemini');
   } catch (err: any) {
     console.error('[Gemini intelligent error]', err);
 

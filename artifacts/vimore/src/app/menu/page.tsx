@@ -122,7 +122,7 @@ export default function MenuPage() {
     { label: t('menu_how_it_works'), icon: BookOpen, color: "text-rose-500", bg: "bg-rose-50", href: "/how-it-works" },
     { label: t('menu_command_core'), icon: Activity, color: "text-indigo-500", bg: "bg-indigo-50", href: "/admin", isHidden: !isAdmin },
     { label: "Advertise", icon: Megaphone, color: "text-violet-500", bg: "bg-violet-50", href: "/advertise" },
-    { label: "ViMore Intelligent", icon: Bot, color: "text-primary", bg: "bg-primary/10", href: "/intelligent", dotOnly: true },
+    { label: "Mesurado Ai", icon: Bot, color: "text-primary", bg: "bg-primary/10", href: "/intelligent", dotOnly: true },
     { label: "Coming Soon", icon: Zap, color: "text-primary", bg: "bg-primary/10", href: "/coming-soon", dotOnly: true },
   ];
 

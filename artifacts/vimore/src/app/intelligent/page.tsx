@@ -42,6 +42,12 @@ const QUICK_CHIPS = [
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const LEGACY_ECONOMY_TERMS = /\b(?:diamonds?|gold|stars?|GD)\b/i;
 
+function normalizeAssistantBranding(text: string): string {
+  return text
+    .replace(/\bViMore Intelligent\b/gi, "Mesurado Ai")
+    .replace(/\bViMore Agent\b/gi, "Mesurado Ai");
+}
+
 export default function IntelligentPage() {
   const { currentUser } = usePosts();
 
@@ -86,9 +92,15 @@ export default function IntelligentPage() {
         Query.limit(30),
       ]);
       setConversations(
-        (res.documents as any[]).filter((conversation) =>
-          !LEGACY_ECONOMY_TERMS.test(`${conversation.title || ''} ${conversation.last_message || ''}`)
-        )
+        (res.documents as any[])
+          .filter((conversation) =>
+            !LEGACY_ECONOMY_TERMS.test(`${conversation.title || ''} ${conversation.last_message || ''}`)
+          )
+          .map((conversation) => ({
+            ...conversation,
+            title: normalizeAssistantBranding(String(conversation.title || "")),
+            last_message: normalizeAssistantBranding(String(conversation.last_message || "")),
+          }))
       );
     } catch {
       setConversations([]);
@@ -122,7 +134,12 @@ export default function IntelligentPage() {
         }).catch(() => {});
       } else {
         setMessages(
-          res.documents.map((d: any) => ({ role: d.role, content: d.content }))
+          res.documents.map((d: any) => ({
+            role: d.role,
+            content: d.role === "assistant"
+              ? normalizeAssistantBranding(String(d.content || ""))
+              : d.content,
+          }))
         );
       }
     } catch {
@@ -189,7 +206,7 @@ export default function IntelligentPage() {
       });
 
       if (res.status === 429) {
-        fullResponse = "ViMore Agent has reached its daily AI limit. This resets automatically — please try again in a few hours.";
+        fullResponse = "Mesurado Ai has reached its daily AI limit. This resets automatically — please try again in a few hours.";
         throw new Error("quota_exceeded");
       }
       if (!res.ok || !res.body) throw new Error("Stream failed");
@@ -309,7 +326,7 @@ export default function IntelligentPage() {
               </Button>
             </Link>
             <div>
-              <p className="font-black text-sm tracking-tight">ViMore Intelligent</p>
+              <p className="font-black text-sm tracking-tight">Mesurado Ai</p>
               <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">AI Assistant</p>
             </div>
           </div>
@@ -419,8 +436,8 @@ export default function IntelligentPage() {
               <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-emerald-400 rounded-full border-2 border-card" />
             </div>
             <div className="min-w-0">
-              <p className="font-black text-sm tracking-tight">ViMore Intelligent</p>
-              <p className="text-[10px] text-emerald-500 font-bold">Always online · Powered by ViMore Agent</p>
+               <p className="font-black text-sm tracking-tight">Mesurado Ai</p>
+               <p className="text-[10px] text-emerald-500 font-bold">Always online · Powered by Mesurado Ai</p>
             </div>
           </div>
 
@@ -456,7 +473,7 @@ export default function IntelligentPage() {
                 {firstName ? `Hey ${firstName}! 👋` : "Hello there! 👋"}
               </h1>
               <p className="text-sm text-muted-foreground max-w-xs leading-relaxed mb-8">
-                I&apos;m <span className="font-bold text-primary">ViMore Intelligent</span>, your personal guide to everything on ViMore. Ask me anything!
+                 I&apos;m <span className="font-bold text-primary">Mesurado Ai</span>, your personal guide to everything on ViMore. Ask me anything!
               </p>
 
               {/* Quick chips */}
@@ -557,7 +574,7 @@ export default function IntelligentPage() {
               </Button>
             </div>
             <p className="text-[9px] text-muted-foreground/40 text-center mt-2 font-medium">
-              ViMore Intelligent · Conversations expire after 30 days · Press Enter to send
+               Mesurado Ai · Conversations expire after 30 days · Press Enter to send
             </p>
           </div>
         </div>

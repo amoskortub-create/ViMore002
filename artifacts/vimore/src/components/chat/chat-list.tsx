@@ -364,10 +364,10 @@ export function ChatList({ selectedId, onSelect }: ChatListProps) {
       <LiteLink
         href="/intelligent"
         className="absolute bottom-5 right-5 h-14 w-14 rounded-2xl bg-gradient-to-br from-violet-600 to-purple-700 flex items-center justify-center shadow-xl shadow-purple-500/40 hover:scale-110 active:scale-95 transition-all z-20"
-        title="ViMore Intelligent"
+        title="Mesurado Ai"
       >
         <Bot className="h-6 w-6 text-white" />
-        <span className="sr-only">ViMore Intelligent</span>
+        <span className="sr-only">Mesurado Ai</span>
       </LiteLink>
     </div>
   );
