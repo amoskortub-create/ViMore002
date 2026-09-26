@@ -3,12 +3,12 @@
  * - APP_SHELL_CACHE: permanent — Next.js static assets (JS/CSS/fonts)
  * - PAGE_CACHE: 5 h — full page HTML fallback for offline navigation
  * - PINNED_CACHE: 24 h — audio/video intentionally played by the user
- * - MEDIA_CACHE: 5 h — all other images / media encountered while browsing
+ * - MEDIA_CACHE: 5 h — offline fallback for images / media encountered while browsing
  * - Range-request synthesis: cached full videos are sliced to satisfy byte-range requests
  * - Push notifications and badge control unchanged
  */
 
-const SW_VERSION = 'v1790196422597';
+const SW_VERSION = 'v1790427879301';
 const APP_SHELL_CACHE = `vimore-shell-${SW_VERSION}`;
 const PAGE_CACHE      = `vimore-pages-${SW_VERSION}`;
 const MEDIA_CACHE     = `vimore-media-${SW_VERSION}`;
@@ -59,6 +59,7 @@ function isMediaUrl(url) {
     const lower  = parsed.pathname.toLowerCase().split('?')[0];
     const host   = parsed.hostname;
     if (MEDIA_EXTENSIONS.some(ext => lower.endsWith(ext))) return true;
+    if (lower.startsWith('/api/file/')) return true;
     if (APPWRITE_FILE_PATTERNS.some(p => lower.includes(p)))  return true;
     if (host === 'picsum.photos') return true;
     if (host.includes('appwrite.io') || host.includes('appwrite.cloud')) return true;
@@ -251,7 +252,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // ── 3. Media: cache-first with range-request synthesis for videos ─────────
+  // ── 3. Media: network-first with cache fallback for offline use ───────────
   if (!isMediaUrl(request.url)) return;
 
   event.respondWith(
@@ -265,26 +266,15 @@ self.addEventListener('fetch', event => {
 
       // For range requests on video URLs: try to synthesize from cached full file
       if (isRangeReq && isVideo) {
-        // Look up the bare URL (no Range header) in pinned cache
-        const pinnedFull = await pinnedCache.match(request.url);
-        if (pinnedFull && !isExpired(pinnedFull, MAX_PINNED_AGE_MS)) {
-          const synthesized = await synthesizeRangeResponse(pinnedFull, rangeHeader);
-          if (synthesized) return synthesized;
-        }
-
-        // Also check regular media cache for a cached full response
-        const mediaFull = await mediaCache.match(request.url);
-        if (mediaFull && !isExpired(mediaFull, MAX_MEDIA_AGE_MS)) {
-          const synthesized = await synthesizeRangeResponse(mediaFull, rangeHeader);
-          if (synthesized) return synthesized;
-        }
-
-        // Nothing cached — pass the range request to network as-is
         try {
-          return await fetch(request);
+          return await fetch(request, { cache: 'no-store' });
         } catch {
-          // Offline with no cache: return stale if available
-          const stale = pinnedFull || mediaFull;
+          // Offline: synthesize a range from a cached full response.
+          const pinnedFull = await pinnedCache.match(request.url);
+          const mediaFull = await mediaCache.match(request.url);
+          const validPinned = pinnedFull && !isExpired(pinnedFull, MAX_PINNED_AGE_MS) ? pinnedFull : null;
+          const validMedia = mediaFull && !isExpired(mediaFull, MAX_MEDIA_AGE_MS) ? mediaFull : null;
+          const stale = validPinned || validMedia;
           if (stale) {
             const synthesized = await synthesizeRangeResponse(stale, rangeHeader);
             if (synthesized) return synthesized;
@@ -293,17 +283,10 @@ self.addEventListener('fetch', event => {
         }
       }
 
-      // Non-range requests: standard cache-first
-      const pinned = await pinnedCache.match(request);
-      if (pinned && !isExpired(pinned, MAX_PINNED_AGE_MS)) return pinned;
-      if (pinned) pinnedCache.delete(request);
-
-      const cached = await mediaCache.match(request);
-      if (cached && !isExpired(cached, MAX_MEDIA_AGE_MS)) return cached;
-      if (cached) mediaCache.delete(request);
-
+      // Online requests must see current profile/media data. Cache is only
+      // used as an offline fallback, which keeps APK reloads aligned with web.
       try {
-        const response = await fetch(request);
+        const response = await fetch(request, { cache: 'no-store' });
         // Cache complete responses (200) — including full video fetches from PIN_MEDIA
         if (response.ok && response.status === 200) {
           mediaCache.put(request, stampResponse(response.clone()));
@@ -311,9 +294,9 @@ self.addEventListener('fetch', event => {
         return response;
       } catch {
         const stalePinned = await pinnedCache.match(request);
-        if (stalePinned) return stalePinned;
+        if (stalePinned && !isExpired(stalePinned, MAX_PINNED_AGE_MS)) return stalePinned;
         const staleMedia = await mediaCache.match(request);
-        if (staleMedia) return staleMedia;
+        if (staleMedia && !isExpired(staleMedia, MAX_MEDIA_AGE_MS)) return staleMedia;
         return new Response('Media unavailable offline', { status: 503 });
       }
     })()
