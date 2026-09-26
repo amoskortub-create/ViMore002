@@ -67,7 +67,13 @@ export async function authFetch(
     headers.set('Authorization', `Bearer ${jwt}`);
   }
 
-  return fetch(url, { ...options, headers });
+  // Auth/session reads must never be satisfied by the Android WebView HTTP
+  // cache. The cached response can contain the previous profile document.
+  return fetch(url, {
+    ...options,
+    headers,
+    cache: options.cache ?? 'no-store',
+  });
 }
 
 /** Call on logout to clear the JWT cache. */
