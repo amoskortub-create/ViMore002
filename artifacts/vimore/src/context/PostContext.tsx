@@ -2145,7 +2145,12 @@ export function PostProvider({ children }: { children: ReactNode }) {
       throw new Error(result?.error || 'Profile update failed');
     }
 
-    setCurrentUserState(prev => prev ? { ...prev, ...data } : null);
+    const updatedUser = { ...currentUser, ...data };
+    setCurrentUserState(updatedUser);
+    // Keep the reload/offline snapshot in sync with the successful profile
+    // update. Otherwise the Android shell can restore the previous avatar
+    // before (or instead of) the next network session check.
+    offlineCache.saveUser(updatedUser);
     if (data.avatar !== undefined || data.name !== undefined || data.cover !== undefined) {
       setPostsState(prev => prev.map(p =>
         p.user?.$id === currentUser.$id
