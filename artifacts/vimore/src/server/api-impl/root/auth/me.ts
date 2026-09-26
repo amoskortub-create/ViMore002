@@ -35,7 +35,16 @@ export async function GET(req: NextRequest) {
       $createdAt: adminUser.$createdAt,
     };
 
-    return NextResponse.json({ authUser, profileDoc });
+    return NextResponse.json(
+      { authUser, profileDoc },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+          Pragma: 'no-cache',
+          Expires: '0',
+        },
+      },
+    );
   } catch (err: any) {
     console.error('[/api/auth/me]', err);
     const code = err?.code ?? err?.status;
