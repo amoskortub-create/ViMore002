@@ -615,6 +615,7 @@ export function PostProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoadingState] = useState(true);
   const [initError] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(false);
+  const sessionCheckInFlightRef = useRef(false);
   const [settings, setSettingsState] = useState<AppSettings>(INITIAL_SETTINGS);
 
   const [clusters, setClustersState] = useState<Cluster[]>([]);
@@ -1595,6 +1596,8 @@ export function PostProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const checkSession = useCallback(async () => {
+    if (sessionCheckInFlightRef.current) return;
+    sessionCheckInFlightRef.current = true;
     setIsLoadingState(true);
 
     // Hard timeout: if the entire session check takes longer than 12s, bail out gracefully
@@ -1611,24 +1614,12 @@ export function PostProvider({ children }: { children: ReactNode }) {
       setIsLoadingState(false);
     }, 12000);
 
-    // If the device has no connectivity, restore from local cache immediately
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      clearTimeout(timeoutId);
-      const cachedUser = offlineCache.getUser() as any | null;
-      if (cachedUser) {
-        setCurrentUserState(cachedUser);
-        const cachedPosts = offlineCache.getPosts() as any[];
-        if (cachedPosts.length > 0) setPostsState(cachedPosts);
-        const cachedConns = offlineCache.getConnections() as any[];
-        if (cachedConns.length > 0) setConnectionsState(cachedConns);
-        setIsOffline(true);
-        setIsLoadingState(false);
-        return;
-      }
-    }
-
     try {
-      const meRes = await authFetch('/api/auth/me');
+      // Android WebView can briefly report navigator.onLine=false while the
+      // network is already usable. Always try the live session first so that
+      // a stale local snapshot is not shown during a normal reload.
+      const meRes = await withStartupTimeout(authFetch('/api/auth/me'), 5000);
+      if (!meRes) throw new Error('Session check timed out');
       if (!meRes.ok) throw new Error('Unauthorized');
       const meData = await meRes.json();
       clearTimeout(timeoutId);
@@ -1662,7 +1653,7 @@ export function PostProvider({ children }: { children: ReactNode }) {
     } catch (err: any) {
       // Network failure (offline) but we have a cached session → go offline mode
       const isNetworkError = (typeof navigator !== 'undefined' && !navigator.onLine) ||
-        (err?.message && /fetch|network|failed to fetch/i.test(err.message));
+        (err?.message && /fetch|network|failed to fetch|timed out/i.test(err.message));
       if (isNetworkError) {
         const cachedUser = offlineCache.getUser() as any | null;
         if (cachedUser) {
@@ -1683,6 +1674,7 @@ export function PostProvider({ children }: { children: ReactNode }) {
     } finally {
       clearTimeout(timeoutId);
       setIsLoadingState(false);
+      sessionCheckInFlightRef.current = false;
     }
   }, [withStartupTimeout, loadFeed, loadSocialGraph, loadConnections, loadStories, loadClusters, loadUserWithdrawals, loadCampaigns, loadChatReadReceipts, loadUnreadSignals, loadConversationMetadata]);
 
@@ -1693,6 +1685,15 @@ export function PostProvider({ children }: { children: ReactNode }) {
         .forEach(k => localStorage.removeItem(k));
     }
     checkSession();
+  }, [checkSession]);
+
+  // A WebView can start in a false offline state and recover shortly after.
+  // Reconcile the user and feed as soon as Android reports connectivity again.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleOnline = () => { void checkSession(); };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
   }, [checkSession]);
 
   // ── Presence heartbeat ────────────────────────────────────────────────────
