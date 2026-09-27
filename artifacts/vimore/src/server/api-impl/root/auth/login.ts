@@ -31,6 +31,18 @@ function extractSessionCookie(setCookieHeader: string | null, projectId: string)
   return match ? decodeURIComponent(match[1]) : '';
 }
 
+function getSessionMaxAge(expire: unknown): number {
+  if (typeof expire === 'string') {
+    const remainingSeconds = Math.floor((Date.parse(expire) - Date.now()) / 1000);
+    if (Number.isFinite(remainingSeconds) && remainingSeconds > 0) {
+      return remainingSeconds;
+    }
+  }
+  // Appwrite normally returns an expiry timestamp. Keep a safe fallback for
+  // older/self-hosted versions that omit it from the session response.
+  return 365 * 24 * 60 * 60;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { email, password } = await req.json();
@@ -66,12 +78,31 @@ export async function POST(req: NextRequest) {
       (typeof data.secret === 'string' && data.secret) ||
       extractSessionCookie(res.headers.get('set-cookie'), PROJECT_ID);
 
-    return NextResponse.json({
+    if (!secret) {
+      console.error('[auth/login] Appwrite returned no session secret');
+      return NextResponse.json(
+        { error: 'Login succeeded but the session could not be saved. Please try again.' },
+        { status: 502 },
+      );
+    }
+
+    const response = NextResponse.json({
       sessionId: data.$id,
       secret,
       userId: data.userId,
       expire: data.expire,
     });
+    // The Android WebView may recreate its JavaScript context or lose
+    // localStorage between launches. A same-origin cookie is persisted by
+    // Capacitor's cookie store and is also understood by session.ts.
+    response.cookies.set(`a_session_${PROJECT_ID}`, secret, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: getSessionMaxAge(data.expire),
+    });
+    return response;
   } catch (err: any) {
     console.error('[auth/login]', err);
     return NextResponse.json({ error: 'Login failed. Please try again.' }, { status: 500 });

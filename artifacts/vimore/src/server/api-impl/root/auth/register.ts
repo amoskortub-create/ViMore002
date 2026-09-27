@@ -35,6 +35,16 @@ function extractSessionCookie(setCookieHeader: string | null, projectId: string)
   return match ? decodeURIComponent(match[1]) : '';
 }
 
+function getSessionMaxAge(expire: unknown): number {
+  if (typeof expire === 'string') {
+    const remainingSeconds = Math.floor((Date.parse(expire) - Date.now()) / 1000);
+    if (Number.isFinite(remainingSeconds) && remainingSeconds > 0) {
+      return remainingSeconds;
+    }
+  }
+  return 365 * 24 * 60 * 60;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { email, password, name } = await req.json();
@@ -91,12 +101,28 @@ export async function POST(req: NextRequest) {
       (typeof sessionData.secret === 'string' && sessionData.secret) ||
       extractSessionCookie(sessionRes.headers.get('set-cookie'), PROJECT_ID);
 
-    return NextResponse.json({
+    if (!secret) {
+      console.error('[auth/register] Appwrite returned no session secret');
+      return NextResponse.json(
+        { error: 'Account created but the session could not be saved. Please log in again.' },
+        { status: 502 },
+      );
+    }
+
+    const response = NextResponse.json({
       userId,
       sessionId: sessionData.$id,
       secret,
       expire: sessionData.expire,
     });
+    response.cookies.set(`a_session_${PROJECT_ID}`, secret, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: getSessionMaxAge(sessionData.expire),
+    });
+    return response;
   } catch (err: any) {
     console.error('[auth/register]', err);
     return NextResponse.json(

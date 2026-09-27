@@ -2074,10 +2074,14 @@ export function PostProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     try { await account.deleteSession('current'); } catch { /* ignore */ }
+    // Clear the server-side persistent session backup even if the Appwrite
+    // client SDK has no in-memory session after an Android WebView restart.
+    try { await fetch('/api/auth/logout', { method: 'POST', cache: 'no-store' }); } catch { /* ignore */ }
     if (typeof window !== 'undefined') {
       try {
         const uid = currentUser?.$id;
         if (uid) localStorage.removeItem(`vimore_unread_signals_${uid}`);
+        localStorage.removeItem('cookieFallback');
       } catch { /* ignore */ }
     }
     offlineCache.clearUser();

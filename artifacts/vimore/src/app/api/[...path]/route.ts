@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import * as AuthLogin from '@/server/api-impl/root/auth/login';
+import * as AuthLogout from '@/server/api-impl/root/auth/logout';
 import * as AuthMe from '@/server/api-impl/root/auth/me';
 import * as AuthRegister from '@/server/api-impl/root/auth/register';
 import * as AuthResetPassword from '@/server/api-impl/root/auth/reset-password';
@@ -63,6 +64,7 @@ type Handler = Partial<Record<'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPT
 
 const ROUTES: Record<string, Handler> = {
   'auth/login': AuthLogin,
+  'auth/logout': AuthLogout,
   'auth/me': AuthMe,
   'auth/register': AuthRegister,
   'auth/reset-password': AuthResetPassword,
